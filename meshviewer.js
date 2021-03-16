@@ -1,7 +1,7 @@
 print("initing");
 filename = getoptionalstring("file", "");
 
-shadowbuffer = createrendertarget(1, 1, 1, GL_RGBA, GL_RGBA32F, 1);
+shadowbuffer = createrendertarget(1024, 1024, 1, GL_RGBA, GL_RGBA32F, 0);
 
 if(filename == "")
 {
@@ -62,8 +62,8 @@ function loop()
         {
             if(MOUSE_1 & PRESSED)
             {
-                lightx += MOUSE_DELTA_X * 0.01;
-                lighty += MOUSE_DELTA_Y * 0.01;
+                lightx -= MOUSE_DELTA_X * 0.01;
+                lighty -= MOUSE_DELTA_Y * 0.01;
             }
         }
 
@@ -148,10 +148,10 @@ function loop()
         wireframe(0);
         depthtest(1);
         culling(CULL_NONE);
-        clear(1, 0, 0);
+        clear(0, 0, 0);
         cleardepth();
         view = mat4settranslation(0, 0, -1.5);
-        persp = mat4setperspective(0.785398, RENDER_WIDTH / RENDER_HEIGHT, 0.1, 1000.0);
+        persp = mat4setperspective(0.785398, 1, 0.1, 1000.0);
         bindshader(shadowbufshader);
         bindattribute("in_Position", MESH_FLAG_POSITION);
         bindattribute("in_Normals", MESH_FLAG_NORMAL);
@@ -186,8 +186,17 @@ function loop()
         bindshader(-1);
     }
     endpass();
-    debugmode(DEBUG_RENDERALLSTEPS);
-    debugclip(1);
+
+    if(KEY_D & PRESSED)
+    {
+        debugmode(DEBUG_RENDERALLSTEPS);
+        debugclip(1);
+    }
+    else
+    {
+        debugmode(DEBUG_OFF);
+    }
+
     //debugrange(-10,100);
     //debugrange(-0.010,0.01);
 }

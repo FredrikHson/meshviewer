@@ -5,5 +5,5 @@ in vec4 position;
 
 void main()
 {
-    color = fract(vec4(position.z / position.w)*50);
+    color = vec4(position.z / position.w);
 }
