@@ -108,9 +108,10 @@ function loop()
         {
             up = 1;
         }
-        if(MOUSE_2 & PRESSED )
+
+        if(MOUSE_2 & PRESSED)
         {
-                zoom += MOUSE_DELTA_Y * 0.01;
+            zoom += MOUSE_DELTA_Y * 0.01;
         }
     }
 
@@ -155,7 +156,7 @@ function loop()
         culling(CULL_NONE);
         clear(0, 0, 0);
         cleardepth();
-        view = mat4settranslation(0, 0, -1.5);
+        view = mat4settranslation(0, 0, -2.0);
         persp = mat4setperspective(0.785398, 1, 0.1, 1000.0);
         bindshader(shadowbufshader);
         bindattribute("in_Position", MESH_FLAG_POSITION);
@@ -166,13 +167,14 @@ function loop()
         bindshader(-1);
     }
     endpass();
+
+    if(KEY_W & PRESSED)
+    {
+        wireframe(1);
+    }
+
     beginpass();
     {
-        if(KEY_W & PRESSED)
-        {
-            wireframe(1);
-        }
-
         depthtest(1);
         culling(CULL_NONE);
         clear(0.125, 0.125, 0.125);
@@ -186,11 +188,11 @@ function loop()
         setuniformmat4("normalmodelview", mat4transpose(mat4invert(mat4mul(model, view))));
         setuniformmat4("persp", persp);
         setuniformf("lightvector", lightvector.x, lightvector.y, lightvector.z);
-        wireframe(0);
         drawmesh(mesh);
         bindshader(-1);
     }
     endpass();
+    wireframe(0);
 
     if(KEY_D & PRESSED)
     {
@@ -201,8 +203,11 @@ function loop()
     {
         debugmode(DEBUG_OFF);
     }
+
     if(KEY_Q & PRESSED)
+    {
         exit();
+    }
 
     //debugrange(-10,100);
     //debugrange(-0.010,0.01);
