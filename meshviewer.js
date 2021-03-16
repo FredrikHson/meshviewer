@@ -54,6 +54,7 @@ print(bbox);
 print(center);
 up = 3;
 step = 0;
+zoom = -1.5;
 function loop()
 {
     if((KEY_LEFT_SHIFT & PRESSED || KEY_RIGHT_SHIFT & PRESSED))
@@ -106,6 +107,10 @@ function loop()
         if(KEY_X & PRESSED)
         {
             up = 1;
+        }
+        if(MOUSE_2 & PRESSED )
+        {
+                zoom += MOUSE_DELTA_Y * 0.01;
         }
     }
 
@@ -172,7 +177,7 @@ function loop()
         culling(CULL_NONE);
         clear(0.125, 0.125, 0.125);
         cleardepth();
-        view = mat4settranslation(0, 0, -1.5);
+        view = mat4settranslation(0, 0, zoom);
         persp = mat4setperspective(0.785398, RENDER_WIDTH / RENDER_HEIGHT, 0.1, 1000.0);
         bindshader(meshshader);
         bindattribute("in_Position", MESH_FLAG_POSITION);
@@ -196,6 +201,8 @@ function loop()
     {
         debugmode(DEBUG_OFF);
     }
+    if(KEY_Q & PRESSED)
+        exit();
 
     //debugrange(-10,100);
     //debugrange(-0.010,0.01);
