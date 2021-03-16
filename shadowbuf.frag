@@ -6,4 +6,5 @@ in vec4 position;
 void main()
 {
     color = vec4(position.z / position.w);
+    color.w = 1;
 }

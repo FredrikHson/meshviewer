@@ -13,7 +13,7 @@ else
 }
 
 bbox = getmeshbbox(mesh);
-meshshader = loadshader("mesh.vert", "mesh.frag", 0, 0, 0);
+meshshader = loadshader("mesh.vert", "mesh.frag", "mesh.geom", 0, 0);
 shadowbufshader = loadshader("shadowbuf.vert", "shadowbuf.frag", 0, 0, 0);
 wireframeshader = loadshader("mesh.vert", "wireframe.frag", 0, 0, 0);
 blit = loadshader("blit.vert", "blit.frag", 0, 0, 0);
@@ -22,7 +22,7 @@ plane = generateplane(50);
 
 //cube = loadmesh("cube.stl");
 rotx = 0.785398;
-roty = -0.785398/2;
+roty = -0.785398 / 2;
 lightx = 0;
 lighty = 0;
 
@@ -148,13 +148,16 @@ function loop()
     shadowmat = model;
     shadowmat = mat4mul(shadowmat, mat4setrotation(lightx, 0, 1, 0));
     shadowmat = mat4mul(shadowmat, mat4setrotation(lighty, 1, 0, 0));
-    lightvector = vec3mat4mul(lightvector, mat4invert((shadowmat)));
+    lightmat = mat4loadidentity();
+    lightmat  = mat4mul(lightmat, mat4setrotation(lightx, 0, 1, 0));
+    lightmat  = mat4mul(lightmat, mat4setrotation(lighty, 1, 0, 0));
+    lightvector = vec3mat4mul(lightvector, mat4invert((lightmat)));
     beginpass(shadowbuffer);
     {
         wireframe(0);
         depthtest(1);
         culling(CULL_NONE);
-        clear(0, 0, 0);
+        clear(0, 0, 0, 1);
         cleardepth();
         view = mat4settranslation(0, 0, -2.0);
         persp = mat4setperspective(0.785398, 1, 0.1, 1000.0);
@@ -177,7 +180,7 @@ function loop()
     {
         depthtest(1);
         culling(CULL_NONE);
-        clear(0.125, 0.125, 0.125);
+        clear(0.0, 0.0, 0.0, 0.7);
         cleardepth();
         view = mat4settranslation(0, 0, zoom);
         persp = mat4setperspective(0.785398, RENDER_WIDTH / RENDER_HEIGHT, 0.1, 1000.0);
@@ -185,7 +188,7 @@ function loop()
         bindattribute("in_Position", MESH_FLAG_POSITION);
         bindattribute("in_Normals", MESH_FLAG_NORMAL);
         setuniformmat4("modelview", mat4mul(model, view));
-        setuniformmat4("normalmodelview", mat4transpose(mat4invert(mat4mul(model, view))));
+        setuniformmat4("shadowmodelview", mat4mul(shadowmat, view));
         setuniformmat4("persp", persp);
         setuniformf("lightvector", lightvector.x, lightvector.y, lightvector.z);
         drawmesh(mesh);
