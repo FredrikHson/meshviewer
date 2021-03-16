@@ -21,8 +21,8 @@ blit = loadshader("blit.vert", "blit.frag", 0, 0, 0);
 plane = generateplane(50);
 
 //cube = loadmesh("cube.stl");
-rotx = 0;
-roty = 0;
+rotx = 0.785398;
+roty = -0.785398/2;
 lightx = 0;
 lighty = 0;
 
