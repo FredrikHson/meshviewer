@@ -56,12 +56,13 @@ up = 3;
 step = 0;
 zoom = -1.5;
 
-function hexToRgb(hex) {
+function hexToRgb(hex, alpha) {
     var result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
     return result ? {
         r: parseInt(result[1], 16) / 255,
         g: parseInt(result[2], 16) / 255,
-        b: parseInt(result[3], 16) / 255
+        b: parseInt(result[3], 16) / 255,
+        a: alpha ? alpha : 1.0
     } : null;
 }
 
@@ -201,7 +202,7 @@ function loop()
     {
         depthtest(1);
         culling(CULL_NONE);
-        clear(ccolor.r, ccolor.g, ccolor.b);
+        clear(ccolor.r, ccolor.g, ccolor.b, ccolor.a);
         cleardepth();
         view = mat4settranslation(0, 0, zoom);
         persp = mat4setperspective(0.785398, RENDER_WIDTH / RENDER_HEIGHT, 0.1, 1000.0);
