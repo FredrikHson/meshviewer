@@ -55,6 +55,16 @@ print(center);
 up = 3;
 step = 0;
 zoom = -1.5;
+
+function hexToRgb(hex) {
+    var result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+    return result ? {
+        r: parseInt(result[1], 16) / 255,
+        g: parseInt(result[2], 16) / 255,
+        b: parseInt(result[3], 16) / 255
+    } : null;
+}
+
 function loop()
 {
     if((KEY_LEFT_SHIFT & PRESSED || KEY_RIGHT_SHIFT & PRESSED))
@@ -176,11 +186,22 @@ function loop()
         wireframe(1);
     }
 
+    ccolor = hexToRgb("1c1e26");
+    color = hexToRgb("#b877db");
+
+    if (filename.match(/\.stl$/i)) {
+        color = hexToRgb("#95c4ce");
+    } else if (filename.match(/\.obj$/i)) {
+        color = hexToRgb("#fab38e");
+    } else if (filename.match(/\.blend$/i)) {
+        color = hexToRgb("#ec6a88");
+    }
+
     beginpass();
     {
         depthtest(1);
         culling(CULL_NONE);
-        clear(0.0, 0.0, 0.0, 0.7);
+        clear(ccolor.r, ccolor.g, ccolor.b);
         cleardepth();
         view = mat4settranslation(0, 0, zoom);
         persp = mat4setperspective(0.785398, RENDER_WIDTH / RENDER_HEIGHT, 0.1, 1000.0);
@@ -191,6 +212,7 @@ function loop()
         setuniformmat4("shadowmodelview", mat4mul(shadowmat, view));
         setuniformmat4("persp", persp);
         setuniformf("lightvector", lightvector.x, lightvector.y, lightvector.z);
+        setuniformf("materialcolor", color.r, color.g, color.b);
         drawmesh(mesh);
         bindshader(-1);
     }
@@ -214,4 +236,8 @@ function loop()
 
     //debugrange(-10,100);
     //debugrange(-0.010,0.01);
+
+    if (KEY_Q & PRESSED) {
+        exit();
+    }
 }

@@ -1,0 +1,4 @@
+[Thumbnailer Entry]
+TryExec=glsltool
+Exec=glsltool -a -H %s -W %s -o %o  -t file=%i -f pathto/meshviewer.js > /dev/null
+MimeType=model/stl;application/x-tgif;application/x-blender
