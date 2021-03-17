@@ -10,6 +10,7 @@ uniform vec3 lightcolor1 = vec3(01.0, 1.0, 1.0);
 uniform vec3 lightcolor2 = vec3(0.4, 0.35, 0.35);
 uniform vec3 lightcolor3 = vec3(0.4, 0.3, 0.0);
 uniform vec3 materialcolor = vec3(0.8, 0.8, 0.8);
+uniform float hardness = 80.0;
 uniform sampler2D env;
 #define PI 3.1415926538
 #define HPI 1.5707963269
@@ -25,8 +26,13 @@ vec2 normaltolonglat(vec3 normal)
 vec3 light(vec3 normal, vec3 dir, vec3 lc)
 {
     vec3 outcolor = vec3(0);
-    float d = max(0, dot(normalize(normal), normalize(dir)));
+    vec3 n = normalize(normal);
+    vec3 ndir = normalize(dir);
+    float d = max(0, dot(n, ndir));
+    float s = max(0, dot(n, normalize(ndir + vec3(0, 0, 1))));
+    s = pow(s, hardness) * 0.5 ;
     outcolor = vec3(d) * pow(lc, vec3(2.2)) * pow(materialcolor, vec3(2.2));
+    outcolor += vec3(s) * lc;
     return outcolor;
 }
 
@@ -105,7 +111,7 @@ void main()
     outcolor += light(normal + vec3(0, 0.5, 0), lightvector2, lightcolor2);
     outcolor += light(normal + vec3(0, -0.5, 0), lightvector3, lightcolor3);
     // convert to srgb
-    //color = vec4(outcolor, 1);
+    color = vec4(outcolor, 1);
     //color = vec4(pow(outcolor, vec3(1 / 2.2)), 1);
     //color = vec4(acesFilm(outcolor), 1);
     //color = vec4(ACESFitted(pow(outcolor, vec3(1 / 2.2))), 1);
