@@ -28,6 +28,7 @@ clearcolor = [ 0, 0, 0, 0 ];
 matcolor = [1, 1, 1];
 angle = [45, 22.5];
 lightdir = [0, 0];
+pos = [0, 0];
 zoom = 0;
 
 function readconfigvalue(configname, defvalue)
@@ -64,7 +65,7 @@ function loadconfig()
 {
     try
     {
-        jsonstring = File.read("confige.json");
+        jsonstring = File.read("config.json");
         config = JSON.parse(jsonstring);
         jsonstring = 0;
         matcolor = readconfigvalue("matcolor", [1, 1, 1]);
@@ -72,8 +73,11 @@ function loadconfig()
         angle[0] *= RAD;
         angle[1] *= RAD;
         lightdir = readconfigvalue("lightangle", [0, 0]);
+        lightdir[0] *= RAD;
+        lightdir[1] *= RAD;
         zoom = readconfigvalue("zoom", -2);
         clearcolor = readconfigvalue("clear", [0, 0, 0, 1]);
+        pos = loadconfigvalue("position", [0, 0]);
     }
     catch(error)
     {
@@ -82,10 +86,9 @@ function loadconfig()
     print(config);
 }
 
+//print(process.env);
 loadconfig();
 
-posx = 0;
-posy = 0;
 
 center =
 {
@@ -123,11 +126,12 @@ function handleinput()
         loadconfig();
     }
 
-    if(KEY_F & PRESSED_NOW)
+    if(KEY_S & PRESSED_NOW)
     {
-        posx = 0;
-        posy = 0;
-        zoom = -1.5;
+        print("\"lightangle\": [", lightdir[0] / RAD, ",", lightdir[1] / RAD, "],");
+        print("\"angle\": [", angle[0] / RAD, ",", angle[1] / RAD, "],");
+        print("\"position\":", pos, ",");
+        print("\"zoom\":", zoom, ",");
     }
 
     if((KEY_LEFT_SHIFT & PRESSED || KEY_RIGHT_SHIFT & PRESSED))
@@ -184,8 +188,8 @@ function handleinput()
 
         if(MOUSE_3 & PRESSED)
         {
-            posx -= MOUSE_DELTA_X * 0.004;
-            posy += MOUSE_DELTA_Y * 0.004;
+            pos[0] -= MOUSE_DELTA_X * 0.004;
+            pos[1] += MOUSE_DELTA_Y * 0.004;
         }
 
         if(MOUSE_2 & PRESSED)
@@ -265,7 +269,7 @@ function loop()
         culling(CULL_NONE);
         clear(clearcolor[0], clearcolor[1], clearcolor[2], clearcolor[3]);
         cleardepth();
-        view = mat4settranslation(posx, posy, zoom);
+        view = mat4settranslation(pos[0], pos[1], zoom);
         persp = mat4setperspective(0.785398, RENDER_WIDTH / RENDER_HEIGHT, 0.1, 1000.0);
         bindshader(meshshader);
         bindattribute("in_Position", MESH_FLAG_POSITION);
