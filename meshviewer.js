@@ -49,9 +49,12 @@ function readconfigvalue(configname, defvalue)
         }
     }
 
-    if(config[ext][configname] != undefined)
+    if(config[ext] != undefined)
     {
-        finalvalue = config[ext][configname];
+        if(config[ext][configname] != undefined)
+        {
+            finalvalue = config[ext][configname];
+        }
     }
 
     if(finalvalue != undefined)
