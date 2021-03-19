@@ -30,9 +30,12 @@ angle = [45, 22.5];
 lightdir = [0, 0];
 pos = [0, 0];
 zoom = 0;
+up = "+Z";
 
 function readconfigvalue(configname, defvalue)
 {
+    var finalvalue;
+
     if(config == undefined)
     {
         return defvalue;
@@ -40,7 +43,7 @@ function readconfigvalue(configname, defvalue)
 
     if(config.defaults != undefined)
     {
-        if(config.defaults.matcolor != undefined)
+        if(config.defaults[configname] != undefined)
         {
             finalvalue = config.defaults[configname];
         }
@@ -68,22 +71,22 @@ function loadconfig()
         jsonstring = File.read("config.json");
         config = JSON.parse(jsonstring);
         jsonstring = 0;
-        matcolor = readconfigvalue("matcolor", [1, 1, 1]);
-        angle = readconfigvalue("angle", [45, -22.5]);
-        angle[0] *= RAD;
-        angle[1] *= RAD;
-        lightdir = readconfigvalue("lightangle", [0, 0]);
-        lightdir[0] *= RAD;
-        lightdir[1] *= RAD;
-        zoom = readconfigvalue("zoom", -2);
-        clearcolor = readconfigvalue("clear", [0, 0, 0, 1]);
-        pos = loadconfigvalue("position", [0, 0]);
     }
     catch(error)
     {
     }
 
-    print(config);
+    matcolor = readconfigvalue("matcolor", [1, 1, 1]);
+    angle = readconfigvalue("angle", [45, -22.5]);
+    angle[0] *= RAD;
+    angle[1] *= RAD;
+    lightdir = readconfigvalue("lightangle", [0, 0]);
+    lightdir[0] *= RAD;
+    lightdir[1] *= RAD;
+    zoom = readconfigvalue("zoom", -2);
+    clearcolor = readconfigvalue("clear", [0, 0, 0, 1]);
+    pos = readconfigvalue("position", [0, 0]);
+    up = readconfigvalue("up", "+Z");
 }
 
 //print(process.env);
@@ -114,11 +117,6 @@ if(zdist > largestdist)
     largestdist = zdist;
 }
 
-print(bbox);
-print(center);
-up = 3;
-step = 0;
-
 function handleinput()
 {
     if(KEY_R & PRESSED_NOW)
@@ -147,17 +145,17 @@ function handleinput()
 
         if(KEY_Z & PRESSED)
         {
-            up = 6;
+            up = "-Z";
         }
 
         if(KEY_Y & PRESSED)
         {
-            up = 5;
+            up = "-Y";
         }
 
         if(KEY_X & PRESSED)
         {
-            up = 4;
+            up = "-X";
         }
     }
     else
@@ -173,17 +171,17 @@ function handleinput()
 
         if(KEY_Z & PRESSED)
         {
-            up = 3;
+            up = "+Z";
         }
 
         if(KEY_Y & PRESSED)
         {
-            up = 2;
+            up = "+Y";
         }
 
         if(KEY_X & PRESSED)
         {
-            up = 1;
+            up = "+X";
         }
 
         if(MOUSE_3 & PRESSED)
@@ -209,23 +207,23 @@ function loop()
 
     switch(up)
     {
-        case 3:
+        case "+Z":
             model = mat4mul(model, mat4setrotation(1.5708, 1, 0, 0));
             break;
 
-        case 6:
+        case "-Z":
             model = mat4mul(model, mat4setrotation(1.5708, -1, 0, 0));
             break;
 
-        case 1:
+        case "+X":
             model = mat4mul(model, mat4setrotation(1.5708, 0, 0, -1));
             break;
 
-        case 4:
+        case "-X":
             model = mat4mul(model, mat4setrotation(1.5708, 0, 0, 1));
             break;
 
-        case 5:
+        case "-Y":
             model = mat4mul(model, mat4setrotation(1.5708 * 2, 1, 0, 0));
             break;
     }
@@ -266,7 +264,7 @@ function loop()
     beginpass();
     {
         depthtest(1);
-        culling(CULL_NONE);
+        culling(CULL_BACK);
         clear(clearcolor[0], clearcolor[1], clearcolor[2], clearcolor[3]);
         cleardepth();
         view = mat4settranslation(pos[0], pos[1], zoom);
