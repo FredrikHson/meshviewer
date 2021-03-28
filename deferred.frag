@@ -6,7 +6,7 @@ uniform vec3 lightvector = vec3(0, 1, 1);
 uniform vec3 lightvector2 = vec3(0, 1, 0.25);
 uniform vec3 lightvector3 = vec3(0.2, -1, .25);
 // assume that colors are in srgb space already
-uniform vec3 lightcolor1 = vec3(01.0, 1.0, 1.0);
+uniform vec3 lightcolor1 = vec3(1.0, 1.0, 1.0);
 uniform vec3 lightcolor2 = vec3(0.4, 0.35, 0.35);
 uniform vec3 lightcolor3 = vec3(0.4, 0.3, 0.0);
 uniform vec3 materialcolor = vec3(0.8, 0.8, 0.8);
@@ -14,6 +14,8 @@ uniform float hardness = 80.0;
 uniform float spec = 0.125;
 #define PI 3.1415926538
 #define HPI 1.5707963269
+#define maxhardness 1000
+uniform mat4 invfinal;
 uniform vec4 clearcolor;
 out vec4 color;
 in vec2 texcoord;
@@ -46,7 +48,7 @@ vec3 light(vec3 normal, vec3 dir, vec3 lc, vec3 mc)
     vec3 n = normalize(normal);
     vec3 ndir = normalize(dir);
     float s = max(0, dot(n, normalize(ndir + vec3(0, 0, 1))));
-    s = pow(s, hardness * 100) * spec;
+    s = pow(s, hardness * maxhardness) * spec;
     float d = max(0, dot(n, ndir)) * (1 - s);
     outcolor = vec3(d) * pow(lc, vec3(2.2)) * pow(mc, vec3(2.2));
     outcolor += vec3(s) * lc;
@@ -64,7 +66,7 @@ vec3 halflambertlight(vec3 normal, vec3 dir, vec3 lc, vec3 mc)
     vec3 n = normalize(normal);
     vec3 ndir = normalize(dir);
     float s = max(0, dot(n, normalize(ndir + vec3(0, 0, 1))));
-    s = pow(s, hardness * 100) * spec;
+    s = pow(s, hardness * maxhardness) * spec;
     float d = pow((dot(n, ndir) * 0.5 + 0.5), 2) * (1 - s);
     outcolor = vec3(d) * pow(lc, vec3(2.2)) * pow(mc, vec3(2.2));
     outcolor += vec3(s) * lc;
@@ -140,36 +142,34 @@ vec3 LinearTosRGB(vec3 color)
     return clr;
 }
 
-//void main()
-//{
-//vec3 outcolor = vec3(0);
-//outcolor += light(normal, lightvector, lightcolor1);
-//outcolor += light(normal + vec3(0, 0.5, 0), lightvector2, lightcolor2);
-//outcolor += light(normal + vec3(0, -0.5, 0), lightvector3, lightcolor3);
-//// convert to srgb
-//color = vec4(outcolor, 1);
-////color = vec4(pow(outcolor, vec3(1 / 2.2)), 1);
-////color = vec4(acesFilm(outcolor), 1);
-////color = vec4(ACESFitted(pow(outcolor, vec3(1 / 2.2))), 1);
-//color = vec4(LinearTosRGB(ACESFitted(outcolor)), 1);
-//}
+vec3 depthtoworldpos(float d)
+{
+    vec4 pos;
+    pos.xy = (texcoord * 2.0 - 1.0);
+    pos.z = d;
+    pos.w = 1;
+    pos = invfinal * pos;
+    pos.xyz /= pos.w;
+    return pos.xyz ;
+}
+
 void main()
 {
-    float alpha = texture(normal, vec2(texcoord.x, 1 - texcoord.y)).w;
-    float x = texture(normal, vec2(texcoord.x + dFdx(texcoord.x), 1 - texcoord.y)).x;
-    x -= texture(normal, vec2(texcoord.x - dFdx(texcoord.x), 1 - texcoord.y)).x;
-    float y = texture(normal, vec2(texcoord.x, 1 - texcoord.y - dFdy(texcoord.y))).y;
-    y -= texture(normal, vec2(texcoord.x, 1 - texcoord.y + dFdy(texcoord.y))).y;
+    float x = texture(normal, vec2(texcoord.x + dFdx(texcoord.x), texcoord.y)).x;
+    x -= texture(normal, vec2(texcoord.x - dFdx(texcoord.x), texcoord.y)).x;
+    float y = texture(normal, vec2(texcoord.x, texcoord.y + dFdy(texcoord.y))).y;
+    y -= texture(normal, vec2(texcoord.x, texcoord.y - dFdy(texcoord.y))).y;
     float cavity = mix(0.5, cavityscale, x + y);
-    vec3 tc = texture(diffuse, vec2(texcoord.x, 1 - texcoord.y)).xyz;
-    vec3 tn = texture(normal, vec2(texcoord.x, 1 - texcoord.y)).xyz;
+    vec4 tc = texture(diffuse, vec2(texcoord.x, texcoord.y));
+    vec4 nbuf = texture(normal, vec2(texcoord.x, texcoord.y));
+    vec3 tn = nbuf.xyz;
     vec3 l = vec3(0);
-    tc = overlay(tc, cavity);
-    l += light(tn, lightvector, lightcolor1, tc);
-    l += halflambertlight(tn, lightvector2, lightcolor2, tc);
-    l += halflambertlight(tn, lightvector3, lightcolor3, tc);
-    //color = overlay(vec4(l, 1), vec4(cavity));
-    color = vec4(l, 1);
-    color = vec4(LinearTosRGB(ACESFitted(color.xyz)), alpha);
-    //color.w = alpha;
+    tc.xyz = min(vec3(1), max(vec3(0), overlay(tc.xyz, cavity)));
+    l += light(tn, lightvector, lightcolor1, tc.xyz);
+    l += halflambertlight(tn, lightvector2, lightcolor2, tc.xyz);
+    l += halflambertlight(tn, lightvector3, lightcolor3, tc.xyz);
+    l += halflambertlight(tn, vec3(0, 0, 1), vec3(1, 1, 1) * 0.2, tc.xyz);
+    vec3 pos = depthtoworldpos(nbuf.w);
+    color = vec4(LinearTosRGB(ACESFitted(l.xyz)), tc.w);
+    //color.xyz=fract(pos);
 }

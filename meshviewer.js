@@ -20,6 +20,7 @@ ext = filename.substr(filename.lastIndexOf('.') + 1);
 bbox = getmeshbbox(mesh);
 meshshader = loadshader("mesh.vert", "gbuf.frag", "mesh.geom", 0, 0);
 deferred = loadshader("blit.vert", "deferred.frag", 0, 0, 0);
+//deferred = loadshader("blit.vert", "worldspacerecovery.frag", 0, 0, 0);
 shadowbufshader = loadshader("shadowbuf.vert", "shadowbuf.frag", 0, 0, 0);
 wireframeshader = loadshader("mesh.vert", "wireframe.frag", 0, 0, 0);
 blit = loadshader("blit.vert", "blit.frag", 0, 0, 0);
@@ -170,76 +171,18 @@ function rgb2hsv(ic)
     }
 
     out[0] *= 60;
-
-    if(out[0] < 0.0)
-    {
-        out[0] = 360.0;
-    }
-
+    out[0] = out[0] <= 0.0 ? 0.0 : out[0] >= 360.0 ? 360.0 : out[0];
+    out[1] = out[1] <= 0.0 ? 0.0 : out[1] >= 1.0 ? 1.0 : out[1];
+    out[2] = out[2] <= 0.0 ? 0.0 : out[2] >= 1.0 ? 1.0 : out[2];
     return out;
 }
-/*
 
- rgb hsv2rgb(hsv in)
-{
-    double      hh, p, q, t, ff;
-    long        i;
-    rgb         out;
-
-    if(in.s <= 0.0) {       // < is bogus, just shuts up warnings
-        out.r = in.v;
-        out.g = in.v;
-        out.b = in.v;
-        return out;
-    }
-    hh = in.h;
-    if(hh >= 360.0) hh = 0.0;
-    hh /= 60.0;
-    i = (long)hh;
-    ff = hh - i;
-    p = in.v * (1.0 - in.s);
-    q = in.v * (1.0 - (in.s * ff));
-    t = in.v * (1.0 - (in.s * (1.0 - ff)));
-
-    switch(i) {
-    case 0:
-        out.r = in.v;
-        out.g = t;
-        out.b = p;
-        break;
-    case 1:
-        out.r = q;
-        out.g = in.v;
-        out.b = p;
-        break;
-    case 2:
-        out.r = p;
-        out.g = in.v;
-        out.b = t;
-        break;
-
-    case 3:
-        out.r = p;
-        out.g = q;
-        out.b = in.v;
-        break;
-    case 4:
-        out.r = t;
-        out.g = p;
-        out.b = in.v;
-        break;
-    case 5:
-    default:
-        out.r = in.v;
-        out.g = p;
-        out.b = q;
-        break;
-    }
-    return out;
-}
-    */
 function hsv2rgb(ic)
 {
+    // clamp input values to avoid it going white when you have saturation set to less than 1 and increasing the value
+    ic[0] = ic[0] <= 0.0 ? 0.0 : ic[0] >= 360.0 ? 360.0 : ic[0];
+    ic[1] = ic[1] <= 0.0 ? 0.0 : ic[1] >= 1.0 ? 1.0 : ic[1];
+    ic[2] = ic[2] <= 0.0 ? 0.0 : ic[2] >= 1.0 ? 1.0 : ic[2];
     out = [0, 0, 0];
 
     if(ic[1] <= 0.0)
@@ -301,6 +244,9 @@ function hsv2rgb(ic)
             break;
     }
 
+    out[0] = out[0] <= 0.0 ? 0.0 : out[0] >= 1.0 ? 1.0 : out[0];
+    out[1] = out[1] <= 0.0 ? 0.0 : out[1] >= 1.0 ? 1.0 : out[1];
+    out[2] = out[2] <= 0.0 ? 0.0 : out[2] >= 1.0 ? 1.0 : out[2];
     return out;
 }
 
@@ -317,17 +263,6 @@ function handleinput()
     {
         hsv = rgb2hsv(matcolor);
         hsv[1] -= MOUSE_DELTA_X * 0.001;
-
-        if(hsv[1] > 1.0)
-        {
-            hsv[1] = 1.0;
-        }
-
-        if(hsv[1] < 0.0)
-        {
-            hsv[1] = 0.0;
-        }
-
         matcolor = hsv2rgb(hsv);
     }
 
@@ -335,17 +270,6 @@ function handleinput()
     {
         hsv = rgb2hsv(matcolor);
         hsv[2] -= MOUSE_DELTA_X * 0.001;
-
-        if(hsv[2] > 1.0)
-        {
-            hsv[2] = 1.0;
-        }
-
-        if(hsv[2] < 0.0)
-        {
-            hsv[2] = 0.0;
-        }
-
         matcolor = hsv2rgb(hsv);
     }
 
@@ -403,13 +327,15 @@ function handleinput()
     {
         print();
         print("\"angle\": [", angle[0] / RAD, ",", angle[1] / RAD, "],");
-        print("\"cavityscale\":" , cavityscale,",");
+        print("\"cavityscale\":", cavityscale, ",");
         print("\"lightangle\": [", lightdir[0] / RAD, ",", lightdir[1] / RAD, "],");
-        print("\"matcolor\":" , matcolor,",");
-        print("\"mathardness\":" , mathardness,",");
-        print("\"matspec\":" , matspec,",");
+        print("\"matcolor\":", matcolor, ",");
+        print("\"mathardness\":", mathardness, ",");
+        print("\"matspec\":", matspec, ",");
         print("\"position\":", pos, ",");
         print("\"zoom\":", zoom, ",");
+        print();
+        print(rgb2hsv(matcolor));
     }
 
     if((KEY_LEFT_SHIFT & PRESSED || KEY_RIGHT_SHIFT & PRESSED))
@@ -545,15 +471,19 @@ function loop()
     {
         depthtest(1);
         culling(CULL_BACK);
-        clear(clearcolor[0], clearcolor[1], clearcolor[2], clearcolor[3]);
-        clear(0.0, 0.0, 0.0, 0.0);
+        clear(clearcolor[0], clearcolor[1], clearcolor[2], clearcolor[3], 0);
+        clear(0, 0, 0, 1, 1);
+        clear(0, 0, 0, 1, 2);
+        //clear(0.0, 0.0, 0.0, 0.0);
         cleardepth();
         view = mat4settranslation(pos[0], pos[1], zoom);
         persp = mat4setperspective(0.785398, RENDER_WIDTH / RENDER_HEIGHT, 0.1, 1000.0);
+        perspmodelviewmat = mat4mul(mat4mul(model, view), persp);
         bindshader(meshshader);
         bindattribute("in_Position", MESH_FLAG_POSITION);
         bindattribute("in_Normals", MESH_FLAG_NORMAL);
         setuniformmat4("modelview", mat4mul(model, view));
+        setuniformmat4("perspmodelview", perspmodelviewmat);
         setuniformmat4("shadowmodelview", mat4mul(shadowmat, view));
         setuniformmat4("persp", persp);
         setuniformf("lightvector", lightvector.x, lightvector.y, lightvector.z);
@@ -565,11 +495,12 @@ function loop()
     beginpass();
     {
         depthtest(0);
+        clear(0, 0, 0, 1);
         culling(CULL_NONE);
-        clear(clearcolor[0], clearcolor[1], clearcolor[2], clearcolor[3]);
         cleardepth();
         view = mat4settranslation(pos[0], pos[1], zoom);
         persp = mat4setperspective(0.785398, RENDER_WIDTH / RENDER_HEIGHT, 0.1, 1000.0);
+        perspmodelviewmat = mat4mul(mat4mul(model, view), persp);
         bindshader(deferred);
         bindattribute("in_Position", MESH_FLAG_POSITION);
         bindattribute("in_Uv", MESH_FLAG_TEXCOORD0);
@@ -578,6 +509,9 @@ function loop()
         setuniformf("hardness", mathardness);
         setuniformf("cavityscale", cavityscale + 0.5);
         setuniformf("clearcolor", clearcolor[0], clearcolor[1], clearcolor[2], clearcolor[3]);
+        setuniformmat4("modelview", mat4mul(model, view));
+        setuniformmat4("shadowmodelview", mat4mul(shadowmat, view));
+        setuniformmat4("invfinal", mat4invert(perspmodelviewmat));
         bindrendertarget("normal", gbuffer, 1);
         bindrendertarget("diffuse", gbuffer, 0);
         drawmesh(plane);

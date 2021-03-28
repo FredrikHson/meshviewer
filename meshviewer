@@ -1,3 +1,6 @@
 #!/bin/bash
 scriptdir=$(dirname $(readlink -f $0))
-glsltool -f  $scriptdir/meshviewer.js -t "file=$1"
+glsltool  -s -a -f  $scriptdir/meshviewer.js -t "file=$1" # 2>&1 >> /tmp/meshviewer.log
+#MANGOHUD_DLSYM=1 mangohud glsltool -a -f  $scriptdir/meshviewer.js -t "file=$1" 2>&1 >> /tmp/meshviewer.log
+#MANGOHUD_DLSYM=1 mangohud ../glsltool/build/glsltool -f  $scriptdir/meshviewer.js -t "file=$1"
+

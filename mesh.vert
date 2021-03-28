@@ -5,14 +5,16 @@ out vec4 v_worldposition;
 
 uniform mat4 modelview;
 uniform mat4 normalmodelview;
+uniform mat4 perspmodelview;
 uniform mat4 persp;
 
 void main(void)
 {
-    vec4 pos = persp *  modelview * vec4(in_Position, 1.0);
+    vec4 pos = perspmodelview * vec4(in_Position, 1.0);
     gl_Position =  pos;
     v_worldposition = modelview * vec4(in_Position, 1.0);
-    v_position = pos.xyzw;
+    v_position = pos;//vec4(in_Position, 1.0);
+    //v_position = perspmodelview * vec4(in_Position, 1.0);
     //normal = mat3(normalmodelview) *  in_Normal.xyz;
     //normal = in_Normal;
 }
