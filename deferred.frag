@@ -192,4 +192,6 @@ void main()
     l += halflambertlight(tn, vec3(0, 0, 1), vec3(1, 1, 1) * 0.2, tc.xyz);
     color = vec4(LinearTosRGB(ACESFitted(l.xyz)), tc.w);
     color.w = 1;
+    if(nbuf.w>=1.0)
+        color=tc;
 }
