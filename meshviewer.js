@@ -37,6 +37,7 @@ pos = [0, 0];
 zoom = 0;
 up = "+Z";
 cavityscale = 0.5;
+grid = 0;
 
 function readconfigvalue(configname, defvalue)
 {
@@ -252,6 +253,10 @@ function hsv2rgb(ic)
 
 function handleinput()
 {
+    if(KEY_G & PRESSED_NOW)
+    {
+        grid = grid ? 0: 1;
+    }
     if(KEY_1 & PRESSED)
     {
         hsv = rgb2hsv(matcolor);
@@ -506,6 +511,7 @@ function loop()
         bindattribute("in_Uv", MESH_FLAG_TEXCOORD0);
         setuniformf("lightvector", lightvector.x, lightvector.y, lightvector.z);
         setuniformf("spec", matspec);
+        setuniformi("grid", grid);
         setuniformf("hardness", mathardness);
         setuniformf("cavityscale", cavityscale + 0.5);
         setuniformf("clearcolor", clearcolor[0], clearcolor[1], clearcolor[2], clearcolor[3]);

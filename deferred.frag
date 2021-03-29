@@ -12,6 +12,7 @@ uniform vec3 lightcolor3 = vec3(0.4, 0.3, 0.0);
 uniform vec3 materialcolor = vec3(0.8, 0.8, 0.8);
 uniform float hardness = 80.0;
 uniform float spec = 0.125;
+uniform bool grid = false;
 #define PI 3.1415926538
 #define HPI 1.5707963269
 #define maxhardness 1000
@@ -164,12 +165,31 @@ void main()
     vec4 nbuf = texture(normal, vec2(texcoord.x, texcoord.y));
     vec3 tn = nbuf.xyz;
     vec3 l = vec3(0);
+    vec3 pos = depthtoworldpos(nbuf.w);
+
+    if(nbuf.w < 1.0 && grid)
+    {
+        if(fract(pos.x / 10) > 0.95)
+        {
+            tc.yz *= 0.15;
+        }
+
+        if(fract(pos.y / 10) > 0.95)
+        {
+            tc.xz *= 0.15;
+        }
+
+        if(fract(pos.z / 10) > 0.95)
+        {
+            tc.xy *= 0.15;
+        }
+    }
+
     tc.xyz = min(vec3(1), max(vec3(0), overlay(tc.xyz, cavity)));
     l += light(tn, lightvector, lightcolor1, tc.xyz);
     l += halflambertlight(tn, lightvector2, lightcolor2, tc.xyz);
     l += halflambertlight(tn, lightvector3, lightcolor3, tc.xyz);
     l += halflambertlight(tn, vec3(0, 0, 1), vec3(1, 1, 1) * 0.2, tc.xyz);
-    vec3 pos = depthtoworldpos(nbuf.w);
     color = vec4(LinearTosRGB(ACESFitted(l.xyz)), tc.w);
-    //color.xyz=fract(pos);
+    color.w = 1;
 }
