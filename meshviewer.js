@@ -485,7 +485,7 @@ function loop()
         wireframe(1);
     }
 
-    maxsamples = Math.min(16, 16);
+    maxsamples = Math.min(16, 1);
 
     for(framenumber = 0; framenumber < maxsamples; framenumber++)
     {
@@ -510,6 +510,7 @@ function loop()
             bindattribute("in_Position", MESH_FLAG_POSITION);
             bindattribute("in_Normals", MESH_FLAG_NORMAL);
             setuniformmat4("modelview", mat4mul(model, view));
+            setuniformmat4("normalmodelview", mat4transpose(mat4invert(mat4mul(model, view))));
             setuniformmat4("perspmodelview", perspmodelviewmat);
             setuniformmat4("shadowmodelview", mat4mul(shadowmat, view));
             setuniformmat4("persp", persp);
@@ -556,6 +557,7 @@ function loop()
             setuniformmat4("modelview", mat4mul(model, view));
             setuniformmat4("shadowmodelview", mat4mul(shadowmat, view));
             setuniformmat4("invfinal", mat4invert(perspmodelviewmat));
+            setuniformf("aspect", RENDER_WIDTH / RENDER_HEIGHT);
             bindrendertarget("normal", gbuffer, 1);
             bindrendertarget("diffuse", gbuffer, 0);
             drawmesh(plane);

@@ -5,6 +5,7 @@ layout(triangle_strip, max_vertices = 3) out;
 
 in vec4 v_position[3];
 in vec4 v_worldposition[3];
+in vec3 v_worldnormal[3];
 
 out vec4 position;
 out vec3 normal;
@@ -17,7 +18,16 @@ void main()
     {
         gl_Position = gl_in[i].gl_Position;
         position = v_position[i];
-        normal = n;
+
+        if(length(v_worldnormal[i]) > 0.5)
+        {
+            normal = v_worldnormal[i];
+        }
+        else
+        {
+            normal = n;
+        }
+
         EmitVertex();
     }
 }

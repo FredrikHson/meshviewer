@@ -19,6 +19,7 @@ uniform mat4 invfinal;
 uniform vec4 clearcolor;
 out vec4 color;
 in vec2 texcoord;
+uniform float aspect = 1;
 vec3 overlay(vec3 base, float blend)
 {
     vec3 fin;
@@ -49,10 +50,10 @@ float ggx(vec3 N, vec3 V, vec3 L, float roughness, float F0)
     float F = F0 + (1.0 - F0) * pow(1.0 - dotLH, 5.0);
     float k = 0.5 * alpha;
     float k2 = k * k;
-    return dotNL * D * F / (dotLH * dotLH * (1.0 - k2) + k2);
+    return min(1000.0f, dotNL * D * F / (dotLH * dotLH * (1.0 - k2) + k2));
 }
 
-vec3 light(vec3 normal, vec3 dir, vec3 lc, vec3 mc)
+vec3 light(vec3 normal, vec3 dir, vec3 view, vec3 lc, vec3 mc)
 {
     vec3 outcolor = vec3(0);
 
@@ -63,13 +64,13 @@ vec3 light(vec3 normal, vec3 dir, vec3 lc, vec3 mc)
 
     vec3 n = normalize(normal);
     vec3 ndir = normalize(dir);
-    float s = ggx(n, vec3(0, 0, -1), ndir, gloss, spec);
+    float s = ggx(n, normalize(view), ndir, gloss, spec);
     float d = max(0, dot(n, ndir)) * (1 - s);
     outcolor = vec3(d) * pow(lc, vec3(2.2)) * pow(mc, vec3(2.2));
     outcolor += vec3(s) * lc;
     return outcolor;
 }
-vec3 halflambertlight(vec3 normal, vec3 dir, vec3 lc, vec3 mc)
+vec3 halflambertlight(vec3 normal, vec3 dir, vec3 view, vec3 lc, vec3 mc)
 {
     vec3 outcolor = vec3(0);
 
@@ -80,7 +81,7 @@ vec3 halflambertlight(vec3 normal, vec3 dir, vec3 lc, vec3 mc)
 
     vec3 n = normalize(normal);
     vec3 ndir = normalize(dir);
-    float s = ggx(n, vec3(0, 0, -1), ndir, gloss, spec);
+    float s = ggx(n, normalize(view), ndir, gloss, spec);
     float d = pow((dot(n, ndir) * 0.5 + 0.5), 2) * (1 - s);
     outcolor = vec3(d) * pow(lc, vec3(2.2)) * pow(mc, vec3(2.2));
     outcolor += vec3(s) * lc;
@@ -129,11 +130,12 @@ void main()
         }
     }
 
+    vec3 v = normalize(vec3((texcoord.x * 2 - 1) * aspect, (texcoord.y * 2 - 1), -nbuf.w));
     tc.xyz = min(vec3(1), max(vec3(0), overlay(tc.xyz, cavity)));
-    l += light(tn, lightvector, lightcolor1, tc.xyz);
-    l += halflambertlight(tn, lightvector2, lightcolor2, tc.xyz);
-    l += halflambertlight(tn, lightvector3, lightcolor3, tc.xyz);
-    l += halflambertlight(tn, vec3(0, 0, 1), vec3(1, 1, 1) * 0.2, tc.xyz);
+    l += light(tn, lightvector, v, lightcolor1, tc.xyz);
+    l += halflambertlight(tn, lightvector2, v, lightcolor2, tc.xyz);
+    l += halflambertlight(tn, lightvector3, v, lightcolor3, tc.xyz);
+    l += halflambertlight(tn, vec3(0, 0, 1), v, vec3(1, 1, 1) * 0.2, tc.xyz);
     color.xyz = l.xyz;
 
     if(nbuf.w >= 1.0)
