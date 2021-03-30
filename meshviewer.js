@@ -581,6 +581,7 @@ function loop()
         bindrendertarget("diffuse", accumbuffer, 0);
         drawmesh(plane);
         bindshader(-1);
+        blend(0);
     }
     endpass();
     wireframe(0);
