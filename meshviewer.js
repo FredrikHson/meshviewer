@@ -31,7 +31,7 @@ plane = generateplane(50);
 
 clearcolor = [ 0, 0, 0, 0 ];
 matcolor = [1, 1, 1];
-mathardness = 0.25;
+matgloss = 0.25;
 matspec = 0.1;
 angle = [45, 22.5];
 lightdir = [0, 0];
@@ -97,7 +97,7 @@ function loadconfig()
 
     matcolor = readconfigvalue("matcolor", [1, 1, 1]);
     matspec = readconfigvalue("matspec", 0.25);;
-    mathardness = readconfigvalue("mathardness", 0.25);;
+    matgloss = readconfigvalue("matgloss", 0.65);;
     angle = readconfigvalue("angle", [45, -22.5]);
     angle[0] *= RAD;
     angle[1] *= RAD;
@@ -307,16 +307,16 @@ function handleinput()
 
     if(KEY_5 & PRESSED)
     {
-        mathardness -= MOUSE_DELTA_X * 0.001;
+        matgloss -= MOUSE_DELTA_X * 0.001;
 
-        if(mathardness > 1.0)
+        if(matgloss > 1.0)
         {
-            mathardness = 1.0;
+            matgloss = 1.0;
         }
 
-        if(mathardness < 0.005)
+        if(matgloss < 0.005)
         {
-            mathardness = 0.005;
+            matgloss = 0.005;
         }
     }
 
@@ -347,7 +347,7 @@ function handleinput()
         print("\"cavityscale\":", cavityscale, ",");
         print("\"lightangle\": [", lightdir[0] / RAD, ",", lightdir[1] / RAD, "],");
         print("\"matcolor\":", matcolor, ",");
-        print("\"mathardness\":", mathardness, ",");
+        print("\"matgloss\":", matgloss, ",");
         print("\"matspec\":", matspec, ",");
         print("\"position\":", pos, ",");
         print("\"zoom\":", zoom, ",");
@@ -484,16 +484,17 @@ function loop()
     {
         wireframe(1);
     }
-    maxsamples=Math.min(16,16);
+
+    maxsamples = Math.min(16, 16);
+
     for(framenumber = 0; framenumber < maxsamples; framenumber++)
     {
         beginpass(gbuffer);
         {
             depthtest(1);
             culling(CULL_BACK);
-            clear(clearcolor[0], clearcolor[1], clearcolor[2], clearcolor[3], 0);
+            clear(0, 0, 0, 0);
             clear(0, 0, 0, 1, 1);
-            clear(0, 0, 0, 1, 2);
             //clear(0.0, 0.0, 0.0, 0.0);
             cleardepth();
             view = mat4settranslation(pos[0], pos[1], zoom);
@@ -536,10 +537,12 @@ function loop()
             cleardepth();
             view = mat4settranslation(pos[0], pos[1], zoom);
             persp = mat4setperspective(0.785398, RENDER_WIDTH / RENDER_HEIGHT, 0.1, 1000.0);
+
             if(framenumber < 16)
             {
                 persp = mat4mul(persp, mat4settranslation(1 / RENDER_WIDTH * jitter[framenumber * 2], 1 / RENDER_HEIGHT * jitter[framenumber * 2 + 1], 0));
             }
+
             perspmodelviewmat = mat4mul(mat4mul(model, view), persp);
             bindshader(deferred);
             bindattribute("in_Position", MESH_FLAG_POSITION);
@@ -547,7 +550,7 @@ function loop()
             setuniformf("lightvector", lightvector.x, lightvector.y, lightvector.z);
             setuniformf("spec", matspec);
             setuniformi("grid", grid);
-            setuniformf("hardness", mathardness);
+            setuniformf("gloss", matgloss);
             setuniformf("cavityscale", cavityscale + 0.5);
             setuniformf("clearcolor", clearcolor[0], clearcolor[1], clearcolor[2], clearcolor[3]);
             setuniformmat4("modelview", mat4mul(model, view));
@@ -566,7 +569,9 @@ function loop()
     beginpass();
     {
         depthtest(0);
-        clear(0, 0, 0, 1);
+        blend(1);
+        blendfunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+        clear(clearcolor[0], clearcolor[1], clearcolor[2], clearcolor[3]);
         culling(CULL_NONE);
         cleardepth();
         bindshader(post);

@@ -10,12 +10,11 @@ uniform vec3 lightcolor1 = vec3(1.0, 1.0, 1.0);
 uniform vec3 lightcolor2 = vec3(0.4, 0.35, 0.35);
 uniform vec3 lightcolor3 = vec3(0.4, 0.3, 0.0);
 uniform vec3 materialcolor = vec3(0.8, 0.8, 0.8);
-uniform float hardness = 80.0;
+uniform float gloss = 80.0;
 uniform float spec = 0.125;
 uniform bool grid = false;
 #define PI 3.1415926538
 #define HPI 1.5707963269
-#define maxhardness 1000
 uniform mat4 invfinal;
 uniform vec4 clearcolor;
 out vec4 color;
@@ -64,7 +63,7 @@ vec3 light(vec3 normal, vec3 dir, vec3 lc, vec3 mc)
 
     vec3 n = normalize(normal);
     vec3 ndir = normalize(dir);
-    float s = ggx(n, vec3(0, 0, -1), ndir, 1 - hardness, spec);
+    float s = ggx(n, vec3(0, 0, -1), ndir, gloss, spec);
     float d = max(0, dot(n, ndir)) * (1 - s);
     outcolor = vec3(d) * pow(lc, vec3(2.2)) * pow(mc, vec3(2.2));
     outcolor += vec3(s) * lc;
@@ -81,7 +80,7 @@ vec3 halflambertlight(vec3 normal, vec3 dir, vec3 lc, vec3 mc)
 
     vec3 n = normalize(normal);
     vec3 ndir = normalize(dir);
-    float s = ggx(n, vec3(0, 0, -1), ndir, 1 - hardness, spec);
+    float s = ggx(n, vec3(0, 0, -1), ndir, gloss, spec);
     float d = pow((dot(n, ndir) * 0.5 + 0.5), 2) * (1 - s);
     outcolor = vec3(d) * pow(lc, vec3(2.2)) * pow(mc, vec3(2.2));
     outcolor += vec3(s) * lc;

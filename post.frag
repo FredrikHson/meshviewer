@@ -2,25 +2,7 @@
 uniform sampler2D background;
 out vec4 color;
 in vec2 texcoord;
-uniform float samples=1;
-
-// Based on Filmic Tonemapping Operators http://filmicgames.com/archives/75
-vec3 tonemapFilmic(const vec3 color)
-{
-    vec3 x = max(vec3(0.0), color - 0.004);
-    return (x * (6.2 * x + 0.5)) / (x * (6.2 * x + 1.7) + 0.06);
-}
-
-// https://knarkowicz.wordpress.com/2016/01/06/aces-filmic-tone-mapping-curve/
-vec3 acesFilm(const vec3 x)
-{
-    const float a = 2.51;
-    const float b = 0.03;
-    const float c = 2.43;
-    const float d = 0.59;
-    const float e = 0.14;
-    return clamp((x * (a * x + b)) / (x * (c * x + d) + e), 0.0, 1.0);
-}
+uniform float samples = 1;
 
 // sRGB => XYZ => D65_2_D60 => AP1 => RRT_SAT
 const mat3 ACESInputMat =
@@ -40,8 +22,8 @@ const mat3 ACESOutputMat =
 
 vec3 RRTAndODTFit(vec3 v)
 {
-    vec3 a = v * (v + 0.0245786f) - 0.000090537f;
-    vec3 b = v * (0.983729f * v + 0.4329510f) + 0.238081f;
+    vec3 a = v * (v + 0.0245786) - 0.000090537;
+    vec3 b = v * (0.983729 * v + 0.4329510) + 0.238081;
     return a / b;
 }
 
@@ -58,23 +40,31 @@ vec3 ACESFitted(vec3 color)
     return color;
 }
 
-vec3 tonemapReinhard(const vec3 color)
-{
-    return color / (color + vec3(1.0));
-}
 vec3 LinearTosRGB(vec3 color)
 {
-    vec3 x = color * 12.92f;
-    vec3 y = 1.055f * pow(clamp(color, 0.0, 1.0), vec3(1.0f / 2.4f)) - 0.055f;
-    vec3 clr = color;
-    clr.r = color.r < 0.0031308f ? x.r : y.r;
-    clr.g = color.g < 0.0031308f ? x.g : y.g;
-    clr.b = color.b < 0.0031308f ? x.b : y.b;
+    vec3 x = color * 12.92;
+    vec3 y = 1.055 * pow(clamp(color, 0.0, 1.0), vec3(1.0 / 2.4)) - 0.055;
+    vec3 clr;
+    clr.r = color.r < 0.0031308 ? x.r : y.r;
+    clr.g = color.g < 0.0031308 ? x.g : y.g;
+    clr.b = color.b < 0.0031308 ? x.b : y.b;
     return clr;
+}
+
+vec3 sRGBToLinear(vec3 color)
+{
+    vec3 x = color / 12.92;
+    vec3 y = pow(clamp((color + 0.055f) * 1 / 1.055, 0.0, 1.0), vec3(2.4));
+    vec3 clr;
+    clr.r = x.r < 0.0031308 ? x.r : y.r;
+    clr.g = x.g < 0.0031308 ? x.g : y.g;
+    clr.b = x.b < 0.0031308 ? x.b : y.b;
+    return  clr;
 }
 
 void main()
 {
-    color = texture(background, vec2(texcoord.x,texcoord.y))/samples;
+    vec4 incolor = texture(background, vec2(texcoord.x, texcoord.y)) / samples;
+    color = incolor;
     color = vec4(LinearTosRGB(ACESFitted(color.xyz)), color.w);
 }
