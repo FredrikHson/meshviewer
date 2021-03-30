@@ -4,6 +4,7 @@ filename = getoptionalstring("file", "");
 
 shadowbuffer = createrendertarget(1024, 1024, 1, GL_RGBA, GL_RGBA32F, 0);
 gbuffer = createrendertarget(1, 1, 2, GL_RGBA, GL_RGBA32F, 1);
+accumbuffer = createrendertarget(1, 1, 1, GL_RGBA, GL_RGBA32F, 1);
 
 if(filename == "")
 {
@@ -20,6 +21,7 @@ ext = filename.substr(filename.lastIndexOf('.') + 1);
 bbox = getmeshbbox(mesh);
 meshshader = loadshader("mesh.vert", "gbuf.frag", "mesh.geom", 0, 0);
 deferred = loadshader("blit.vert", "deferred.frag", 0, 0, 0);
+post = loadshader("blit.vert", "post.frag", 0, 0, 0);
 //deferred = loadshader("blit.vert", "worldspacerecovery.frag", 0, 0, 0);
 shadowbufshader = loadshader("shadowbuf.vert", "shadowbuf.frag", 0, 0, 0);
 wireframeshader = loadshader("mesh.vert", "wireframe.frag", 0, 0, 0);
@@ -38,6 +40,13 @@ zoom = 0;
 up = "+Z";
 cavityscale = 0.5;
 grid = 0;
+jitter = [
+             0.375, 0.4375,  0.625, 0.0625, 0.875, 0.1875, 0.125, 0.0625,
+             0.375, 0.6875, 0.875, 0.375, 0.625, 0.5625, 0.375, 0.9375,
+             0.625, 0.3125, 0.125, 0.5625, 0.125, 0.8325, 0.375, 0.1875,
+             0.875, 0.9375, 0.875, 0.6875, 0.125, 0.3125, 0.625, 0.8125
+          ];
+
 
 function readconfigvalue(configname, defvalue)
 {
@@ -251,12 +260,15 @@ function hsv2rgb(ic)
     return out;
 }
 
+var framenumber = 0;
+
 function handleinput()
 {
     if(KEY_G & PRESSED_NOW)
     {
-        grid = grid ? 0: 1;
+        grid = grid ? 0 : 1;
     }
+
     if(KEY_1 & PRESSED)
     {
         hsv = rgb2hsv(matcolor);
@@ -375,6 +387,7 @@ function handleinput()
         {
             if(MOUSE_1 & PRESSED)
             {
+                framenumber = 0;
                 angle[0] += MOUSE_DELTA_X * 0.01;
                 angle[1] += MOUSE_DELTA_Y * 0.01;
             }
@@ -471,55 +484,96 @@ function loop()
     {
         wireframe(1);
     }
-
-    beginpass(gbuffer);
+    maxsamples=Math.min(16,16);
+    for(framenumber = 0; framenumber < maxsamples; framenumber++)
     {
-        depthtest(1);
-        culling(CULL_BACK);
-        clear(clearcolor[0], clearcolor[1], clearcolor[2], clearcolor[3], 0);
-        clear(0, 0, 0, 1, 1);
-        clear(0, 0, 0, 1, 2);
-        //clear(0.0, 0.0, 0.0, 0.0);
-        cleardepth();
-        view = mat4settranslation(pos[0], pos[1], zoom);
-        persp = mat4setperspective(0.785398, RENDER_WIDTH / RENDER_HEIGHT, 0.1, 1000.0);
-        perspmodelviewmat = mat4mul(mat4mul(model, view), persp);
-        bindshader(meshshader);
-        bindattribute("in_Position", MESH_FLAG_POSITION);
-        bindattribute("in_Normals", MESH_FLAG_NORMAL);
-        setuniformmat4("modelview", mat4mul(model, view));
-        setuniformmat4("perspmodelview", perspmodelviewmat);
-        setuniformmat4("shadowmodelview", mat4mul(shadowmat, view));
-        setuniformmat4("persp", persp);
-        setuniformf("lightvector", lightvector.x, lightvector.y, lightvector.z);
-        setuniformf("materialcolor", matcolor[0], matcolor[1], matcolor[2]);
-        drawmesh(mesh);
-        bindshader(-1);
+        beginpass(gbuffer);
+        {
+            depthtest(1);
+            culling(CULL_BACK);
+            clear(clearcolor[0], clearcolor[1], clearcolor[2], clearcolor[3], 0);
+            clear(0, 0, 0, 1, 1);
+            clear(0, 0, 0, 1, 2);
+            //clear(0.0, 0.0, 0.0, 0.0);
+            cleardepth();
+            view = mat4settranslation(pos[0], pos[1], zoom);
+            persp = mat4setperspective(0.785398, RENDER_WIDTH / RENDER_HEIGHT, 0.1, 1000.0);
+
+            if(framenumber < 16)
+            {
+                persp = mat4mul(persp, mat4settranslation(1 / RENDER_WIDTH * jitter[framenumber * 2], 1 / RENDER_HEIGHT * jitter[framenumber * 2 + 1], 0));
+            }
+
+            perspmodelviewmat = mat4mul(mat4mul(model, view), persp);
+            bindshader(meshshader);
+            bindattribute("in_Position", MESH_FLAG_POSITION);
+            bindattribute("in_Normals", MESH_FLAG_NORMAL);
+            setuniformmat4("modelview", mat4mul(model, view));
+            setuniformmat4("perspmodelview", perspmodelviewmat);
+            setuniformmat4("shadowmodelview", mat4mul(shadowmat, view));
+            setuniformmat4("persp", persp);
+            setuniformf("lightvector", lightvector.x, lightvector.y, lightvector.z);
+            setuniformf("materialcolor", matcolor[0], matcolor[1], matcolor[2]);
+            drawmesh(mesh);
+            bindshader(-1);
+        }
+        endpass();
+        beginpass(accumbuffer);
+        {
+            depthtest(0);
+
+            if(framenumber == 0)
+            {
+                clear(0, 0, 0, 1);
+            }
+
+            //if(framenumber < 16)
+            //{
+            //framenumber += 1;
+            blend(1);
+            blendfunc(GL_ONE, GL_ONE);
+            culling(CULL_NONE);
+            cleardepth();
+            view = mat4settranslation(pos[0], pos[1], zoom);
+            persp = mat4setperspective(0.785398, RENDER_WIDTH / RENDER_HEIGHT, 0.1, 1000.0);
+            if(framenumber < 16)
+            {
+                persp = mat4mul(persp, mat4settranslation(1 / RENDER_WIDTH * jitter[framenumber * 2], 1 / RENDER_HEIGHT * jitter[framenumber * 2 + 1], 0));
+            }
+            perspmodelviewmat = mat4mul(mat4mul(model, view), persp);
+            bindshader(deferred);
+            bindattribute("in_Position", MESH_FLAG_POSITION);
+            bindattribute("in_Uv", MESH_FLAG_TEXCOORD0);
+            setuniformf("lightvector", lightvector.x, lightvector.y, lightvector.z);
+            setuniformf("spec", matspec);
+            setuniformi("grid", grid);
+            setuniformf("hardness", mathardness);
+            setuniformf("cavityscale", cavityscale + 0.5);
+            setuniformf("clearcolor", clearcolor[0], clearcolor[1], clearcolor[2], clearcolor[3]);
+            setuniformmat4("modelview", mat4mul(model, view));
+            setuniformmat4("shadowmodelview", mat4mul(shadowmat, view));
+            setuniformmat4("invfinal", mat4invert(perspmodelviewmat));
+            bindrendertarget("normal", gbuffer, 1);
+            bindrendertarget("diffuse", gbuffer, 0);
+            drawmesh(plane);
+            bindshader(-1);
+            //}
+            blend(0);
+        }
+        endpass();
     }
-    endpass();
+
     beginpass();
     {
         depthtest(0);
         clear(0, 0, 0, 1);
         culling(CULL_NONE);
         cleardepth();
-        view = mat4settranslation(pos[0], pos[1], zoom);
-        persp = mat4setperspective(0.785398, RENDER_WIDTH / RENDER_HEIGHT, 0.1, 1000.0);
-        perspmodelviewmat = mat4mul(mat4mul(model, view), persp);
-        bindshader(deferred);
+        bindshader(post);
         bindattribute("in_Position", MESH_FLAG_POSITION);
         bindattribute("in_Uv", MESH_FLAG_TEXCOORD0);
-        setuniformf("lightvector", lightvector.x, lightvector.y, lightvector.z);
-        setuniformf("spec", matspec);
-        setuniformi("grid", grid);
-        setuniformf("hardness", mathardness);
-        setuniformf("cavityscale", cavityscale + 0.5);
-        setuniformf("clearcolor", clearcolor[0], clearcolor[1], clearcolor[2], clearcolor[3]);
-        setuniformmat4("modelview", mat4mul(model, view));
-        setuniformmat4("shadowmodelview", mat4mul(shadowmat, view));
-        setuniformmat4("invfinal", mat4invert(perspmodelviewmat));
-        bindrendertarget("normal", gbuffer, 1);
-        bindrendertarget("diffuse", gbuffer, 0);
+        setuniformf("samples", maxsamples);
+        bindrendertarget("diffuse", accumbuffer, 0);
         drawmesh(plane);
         bindshader(-1);
     }
