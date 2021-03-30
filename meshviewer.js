@@ -272,27 +272,27 @@ function handleinput()
     if(KEY_1 & PRESSED)
     {
         hsv = rgb2hsv(matcolor);
-        hsv[0] -= MOUSE_DELTA_X * 0.001 * 360;
+        hsv[0] -= MOUSE_DELTA_X * 1 / WINDOW_WIDTH * 360;
         matcolor = hsv2rgb(hsv);
     }
 
     if(KEY_2 & PRESSED)
     {
         hsv = rgb2hsv(matcolor);
-        hsv[1] -= MOUSE_DELTA_X * 0.001;
+        hsv[1] -= MOUSE_DELTA_X * 1 / WINDOW_WIDTH;
         matcolor = hsv2rgb(hsv);
     }
 
     if(KEY_3 & PRESSED)
     {
         hsv = rgb2hsv(matcolor);
-        hsv[2] -= MOUSE_DELTA_X * 0.001;
+        hsv[2] -= MOUSE_DELTA_X * 1 / WINDOW_WIDTH;
         matcolor = hsv2rgb(hsv);
     }
 
     if(KEY_4 & PRESSED)
     {
-        matspec -= MOUSE_DELTA_X * 0.001;
+        matspec -= MOUSE_DELTA_X * 1 / WINDOW_WIDTH;
 
         if(matspec > 1.0)
         {
@@ -307,7 +307,7 @@ function handleinput()
 
     if(KEY_5 & PRESSED)
     {
-        matgloss -= MOUSE_DELTA_X * 0.001;
+        matgloss -= MOUSE_DELTA_X * 1 / WINDOW_WIDTH;
 
         if(matgloss > 1.0)
         {
@@ -322,7 +322,7 @@ function handleinput()
 
     if(KEY_C & PRESSED)
     {
-        cavityscale -= MOUSE_DELTA_X * 0.005;
+        cavityscale -= MOUSE_DELTA_X * 4 / WINDOW_WIDTH;
 
         if(cavityscale < 0)
         {
