@@ -37,6 +37,22 @@ vec2 normaltolonglat(vec3 normal)
     return longlat;
 }
 
+float ggx(vec3 N, vec3 V, vec3 L, float roughness, float F0)
+{
+    float alpha = roughness * roughness;
+    vec3 H = normalize(L - V);
+    float dotLH = max(0.0, dot(L, H));
+    float dotNH = max(0.0, dot(N, H));
+    float dotNL = max(0.0, dot(N, L));
+    float alphaSqr = alpha * alpha;
+    float denom = dotNH * dotNH * (alphaSqr - 1.0) + 1.0;
+    float D = alphaSqr / (PI * denom * denom);
+    float F = F0 + (1.0 - F0) * pow(1.0 - dotLH, 5.0);
+    float k = 0.5 * alpha;
+    float k2 = k * k;
+    return dotNL * D * F / (dotLH * dotLH * (1.0 - k2) + k2);
+}
+
 vec3 light(vec3 normal, vec3 dir, vec3 lc, vec3 mc)
 {
     vec3 outcolor = vec3(0);
@@ -48,8 +64,7 @@ vec3 light(vec3 normal, vec3 dir, vec3 lc, vec3 mc)
 
     vec3 n = normalize(normal);
     vec3 ndir = normalize(dir);
-    float s = max(0, dot(n, normalize(ndir + vec3(0, 0, 1))));
-    s = pow(s, hardness * maxhardness) * spec;
+    float s = ggx(n, vec3(0, 0, -1), ndir, 1 - hardness, spec);
     float d = max(0, dot(n, ndir)) * (1 - s);
     outcolor = vec3(d) * pow(lc, vec3(2.2)) * pow(mc, vec3(2.2));
     outcolor += vec3(s) * lc;
@@ -66,8 +81,7 @@ vec3 halflambertlight(vec3 normal, vec3 dir, vec3 lc, vec3 mc)
 
     vec3 n = normalize(normal);
     vec3 ndir = normalize(dir);
-    float s = max(0, dot(n, normalize(ndir + vec3(0, 0, 1))));
-    s = pow(s, hardness * maxhardness) * spec;
+    float s = ggx(n, vec3(0, 0, -1), ndir, 1 - hardness, spec);
     float d = pow((dot(n, ndir) * 0.5 + 0.5), 2) * (1 - s);
     outcolor = vec3(d) * pow(lc, vec3(2.2)) * pow(mc, vec3(2.2));
     outcolor += vec3(s) * lc;
