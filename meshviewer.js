@@ -570,7 +570,7 @@ function loop()
     {
         depthtest(0);
         blend(1);
-        blendfunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+        blendfuncseparate(GL_ONE, GL_ONE_MINUS_SRC_ALPHA, GL_ONE, GL_ONE);
         clear(clearcolor[0], clearcolor[1], clearcolor[2], clearcolor[3]);
         culling(CULL_NONE);
         cleardepth();
