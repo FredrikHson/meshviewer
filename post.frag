@@ -66,5 +66,7 @@ void main()
 {
     vec4 incolor = texture(background, vec2(texcoord.x, texcoord.y)) / samples;
     color = incolor;
-    color = vec4(LinearTosRGB(ACESFitted(color.xyz)), color.w);
+    //color=pow(color,vec4(1/2.2));
+    color.xyz = LinearTosRGB(ACESFitted(color.xyz));
+    color.w=incolor.w;
 }

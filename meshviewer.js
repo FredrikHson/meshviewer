@@ -16,7 +16,7 @@ else
     setwindowtitle("meshviewer ".concat(filename));
 }
 
-ext = filename.substr(filename.lastIndexOf('.') + 1);
+ext = filename.substr(filename.lastIndexOf('.') + 1).toLowerCase();
 
 bbox = getmeshbbox(mesh);
 meshshader = loadshader("mesh.vert", "gbuf.frag", "mesh.geom", 0, 0);
@@ -93,6 +93,18 @@ function loadconfig()
     }
     catch(error)
     {
+        print("failed to load config.json");
+    }
+
+    try
+    {
+        jsonstring = File.read("aasamples.json");
+        jitter = JSON.parse(jsonstring);
+        jsonstring = 0;
+    }
+    catch(error)
+    {
+        print("failed to load aasamples.json");
     }
 
     matcolor = readconfigvalue("matcolor", [1, 1, 1]);
@@ -387,7 +399,6 @@ function handleinput()
         {
             if(MOUSE_1 & PRESSED)
             {
-                framenumber = 0;
                 angle[0] += MOUSE_DELTA_X * 0.01;
                 angle[1] += MOUSE_DELTA_Y * 0.01;
             }
@@ -418,6 +429,11 @@ function handleinput()
         {
             zoom += MOUSE_DELTA_Y * 0.01;
         }
+    }
+
+    if(KEY_ANY & PRESSED || MOUSE_ANY & PRESSED)
+    {
+        framenumber = 0;
     }
 }
 
@@ -485,9 +501,10 @@ function loop()
         wireframe(1);
     }
 
-    maxsamples = Math.min(16, 1);
+    maxsamples = Math.min(256, 256);
 
-    for(framenumber = 0; framenumber < maxsamples; framenumber++)
+    //for(framenumber = 0; framenumber < maxsamples; framenumber++)
+    if(framenumber < maxsamples)
     {
         beginpass(gbuffer);
         {
@@ -500,7 +517,7 @@ function loop()
             view = mat4settranslation(pos[0], pos[1], zoom);
             persp = mat4setperspective(0.785398, RENDER_WIDTH / RENDER_HEIGHT, 0.1, 1000.0);
 
-            if(framenumber < 16)
+            if(framenumber < maxsamples)
             {
                 persp = mat4mul(persp, mat4settranslation(1 / RENDER_WIDTH * jitter[framenumber * 2], 1 / RENDER_HEIGHT * jitter[framenumber * 2 + 1], 0));
             }
@@ -526,7 +543,7 @@ function loop()
 
             if(framenumber == 0)
             {
-                clear(0, 0, 0, 1);
+                clear(0, 0, 0, 0);
             }
 
             //if(framenumber < 16)
@@ -534,12 +551,13 @@ function loop()
             //framenumber += 1;
             blend(1);
             blendfunc(GL_ONE, GL_ONE);
+            blendfuncseparate(GL_ONE, GL_ONE, GL_ONE, GL_ONE);
             culling(CULL_NONE);
             cleardepth();
             view = mat4settranslation(pos[0], pos[1], zoom);
             persp = mat4setperspective(0.785398, RENDER_WIDTH / RENDER_HEIGHT, 0.1, 1000.0);
 
-            if(framenumber < 16)
+            if(framenumber < maxsamples)
             {
                 persp = mat4mul(persp, mat4settranslation(1 / RENDER_WIDTH * jitter[framenumber * 2], 1 / RENDER_HEIGHT * jitter[framenumber * 2 + 1], 0));
             }
@@ -566,6 +584,7 @@ function loop()
             blend(0);
         }
         endpass();
+        framenumber++;
     }
 
     beginpass();
@@ -579,7 +598,8 @@ function loop()
         bindshader(post);
         bindattribute("in_Position", MESH_FLAG_POSITION);
         bindattribute("in_Uv", MESH_FLAG_TEXCOORD0);
-        setuniformf("samples", maxsamples);
+        setuniformf("samples", framenumber);
+        //print("numsamples:" ,framenumber);
         bindrendertarget("diffuse", accumbuffer, 0);
         drawmesh(plane);
         bindshader(-1);
@@ -607,4 +627,14 @@ function loop()
 
     //debugrange(-10,100);
     //debugrange(-0.010,0.01);
+}
+
+function resize()
+{
+    framenumber = 0;
+}
+
+function filechange()
+{
+    framenumber = 0;
 }
