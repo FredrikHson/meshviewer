@@ -1,22 +1,22 @@
 print("initing");
 RAD = 0.0174532925199;
-filename = getoptionalstring("file", "");
+meshfilename = getoptionalstring("file", "");
 
 shadowbuffer = createrendertarget(1024, 1024, 1, GL_RGBA, GL_RGBA32F, 0);
 gbuffer = createrendertarget(1, 1, 2, GL_RGBA, GL_RGBA32F, 1);
 accumbuffer = createrendertarget(1, 1, 1, GL_RGBA, GL_RGBA32F, 1);
 
-if(filename == "")
+if(meshfilename == "")
 {
     mesh = generateplane(10, 10, 1, 1);
 }
 else
 {
-    mesh = loadmesh(filename);
-    setwindowtitle("meshviewer ".concat(filename));
+    mesh = loadmesh(meshfilename);
+    setwindowtitle("meshviewer ".concat(meshfilename));
 }
 
-ext = filename.substr(filename.lastIndexOf('.') + 1).toLowerCase();
+ext = meshfilename.substr(meshfilename.lastIndexOf('.') + 1).toLowerCase();
 
 bbox = getmeshbbox(mesh);
 meshshader = loadshader("mesh.vert", "gbuf.frag", "mesh.geom", 0, 0);
@@ -26,6 +26,7 @@ post = loadshader("blit.vert", "post.frag", 0, 0, 0);
 shadowbufshader = loadshader("shadowbuf.vert", "shadowbuf.frag", 0, 0, 0);
 wireframeshader = loadshader("mesh.vert", "wireframe.frag", 0, 0, 0);
 blit = loadshader("blit.vert", "blit.frag", 0, 0, 0);
+drawwireframe = false;
 
 plane = generateplane(50);
 
@@ -107,6 +108,7 @@ function loadconfig()
         print("failed to load aasamples.json");
     }
 
+    watchfile("config.json");
     matcolor = readconfigvalue("matcolor", [1, 1, 1]);
     matspec = readconfigvalue("matspec", 0.25);;
     matgloss = readconfigvalue("matgloss", 0.65);;
@@ -352,6 +354,11 @@ function handleinput()
         loadconfig();
     }
 
+    if(KEY_W & PRESSED_NOW)
+    {
+        drawwireframe = !drawwireframe;
+    }
+
     if(KEY_S & PRESSED_NOW)
     {
         print();
@@ -495,17 +502,16 @@ function loop()
         bindshader(-1);
     }
     endpass();
-
-    if(KEY_W & PRESSED)
-    {
-        wireframe(1);
-    }
-
     maxsamples = Math.min(256, 256);
 
     //for(framenumber = 0; framenumber < maxsamples; framenumber++)
     if(framenumber < maxsamples)
     {
+        if(drawwireframe)
+        {
+            wireframe(1);
+        }
+
         beginpass(gbuffer);
         {
             depthtest(1);
@@ -537,6 +543,7 @@ function loop()
             bindshader(-1);
         }
         endpass();
+        wireframe(0);
         beginpass(accumbuffer);
         {
             depthtest(0);
@@ -606,7 +613,6 @@ function loop()
         blend(0);
     }
     endpass();
-    wireframe(0);
 
     if(KEY_D & PRESSED)
     {
@@ -634,7 +640,14 @@ function resize()
     framenumber = 0;
 }
 
-function filechange()
+function filechange(filename)
 {
+    print("file changed", filename);
+
+    if(filename == "config.json")
+    {
+        loadconfig();
+    }
+
     framenumber = 0;
 }

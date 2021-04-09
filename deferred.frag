@@ -130,7 +130,8 @@ void main()
         }
     }
 
-    vec3 v = normalize(vec3((texcoord.x * 2 - 1) * aspect, (texcoord.y * 2 - 1), -nbuf.w));
+    //vec3 v = normalize(vec3((texcoord.x * 2 - 1) * aspect, (texcoord.y * 2 - 1), -nbuf.w*8));
+    vec3 v = normalize(vec3((texcoord.x * 2 - 1) * aspect, (texcoord.y * 2 - 1), -1));
     tc.xyz = min(vec3(1), max(vec3(0), overlay(tc.xyz, cavity)));
     l += light(tn, lightvector, v, lightcolor1, tc.xyz);
     l += halflambertlight(tn, lightvector2, v, lightcolor2, tc.xyz);
