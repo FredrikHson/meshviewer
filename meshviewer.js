@@ -41,13 +41,14 @@ zoom = 0;
 up = "+Z";
 cavityscale = 0.5;
 grid = 0;
+calculatenormals = 0;
 jitter = [
              0.375, 0.4375,  0.625, 0.0625, 0.875, 0.1875, 0.125, 0.0625,
              0.375, 0.6875, 0.875, 0.375, 0.625, 0.5625, 0.375, 0.9375,
              0.625, 0.3125, 0.125, 0.5625, 0.125, 0.8325, 0.375, 0.1875,
              0.875, 0.9375, 0.875, 0.6875, 0.125, 0.3125, 0.625, 0.8125
           ];
-
+center = {x: 0, y: 0, z: 0};
 
 function readconfigvalue(configname, defvalue)
 {
@@ -123,36 +124,35 @@ function loadconfig()
     pos = readconfigvalue("position", [0, 0]);
     up = readconfigvalue("up", "+Z");
     cavityscale = readconfigvalue("cavityscale", 0);
+    calculatenormals = readconfigvalue("calculatenormals", 0);
 }
 
 //print(process.env);
 loadconfig();
 
 
-center =
+function setupcenter()
 {
-x:
-    (bbox.max_x + bbox.min_x) / 2.0,
-y:
-    (bbox.max_y + bbox.min_y) / 2.0,
-z:
-    (bbox.max_z + bbox.min_z) / 2.0
-};
-xdist = bbox.max_x - bbox.min_x;
-ydist = bbox.max_y - bbox.min_y;
-zdist = bbox.max_z - bbox.min_z;
-largestdist = xdist;
+    center.x = (bbox.max_x + bbox.min_x) / 2.0;
+    center.y = (bbox.max_y + bbox.min_y) / 2.0;
+    center.z = (bbox.max_z + bbox.min_z) / 2.0;
+    xdist = bbox.max_x - bbox.min_x;
+    ydist = bbox.max_y - bbox.min_y;
+    zdist = bbox.max_z - bbox.min_z;
+    largestdist = xdist;
 
-if(ydist > largestdist)
-{
-    largestdist = ydist;
+    if(ydist > largestdist)
+    {
+        largestdist = ydist;
+    }
+
+    if(zdist > largestdist)
+    {
+        largestdist = zdist;
+    }
 }
 
-if(zdist > largestdist)
-{
-    largestdist = zdist;
-}
-
+setupcenter();
 function rgb2hsv(ic)
 {
     out = [0, 0, 0];
@@ -525,7 +525,8 @@ function loop()
 
             if(framenumber < maxsamples)
             {
-                persp = mat4mul(persp, mat4settranslation(1 / RENDER_WIDTH * jitter[framenumber * 2], 1 / RENDER_HEIGHT * jitter[framenumber * 2 + 1], 0));
+                jittersize = 1.0;
+                persp = mat4mul(persp, mat4settranslation(jittersize / RENDER_WIDTH * jitter[framenumber * 2], jittersize / RENDER_HEIGHT * jitter[framenumber * 2 + 1], 0));
             }
 
             perspmodelviewmat = mat4mul(mat4mul(model, view), persp);
@@ -539,6 +540,7 @@ function loop()
             setuniformmat4("persp", persp);
             setuniformf("lightvector", lightvector.x, lightvector.y, lightvector.z);
             setuniformf("materialcolor", matcolor[0], matcolor[1], matcolor[2]);
+            setuniformi("calculatenormals", calculatenormals);
             drawmesh(mesh);
             bindshader(-1);
         }
@@ -650,4 +652,23 @@ function filechange(filename)
     }
 
     framenumber = 0;
+}
+
+function filedrop(files)
+{
+    if(typeof files[0] == "string")
+    {
+        if(ismesh(files[0]))
+        {
+            destroymesh(mesh);
+            meshfilename = files[0];
+            mesh = loadmesh(meshfilename);
+            bbox = getmeshbbox(mesh);
+            ext = meshfilename.substr(meshfilename.lastIndexOf('.') + 1).toLowerCase();
+            setupcenter();
+            loadconfig();
+            framenumber = 0;
+            loop();
+        }
+    }
 }

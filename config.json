@@ -18,6 +18,7 @@
         ]
     },
     "stl": {
+        "calculatenormals": 1,
         "angle": [
             49.01070457,
             -18.48929543
@@ -32,7 +33,7 @@
             0.3955359593,
             0.310792862
         ],
-        "mathardness": 0.222,
+        "matgloss": 0.7,
         "matspec": 0.046,
         "position": [
             0,
