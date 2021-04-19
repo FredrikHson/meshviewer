@@ -110,8 +110,8 @@ function loadconfig()
     }
 
     watchfile("config.json");
-    matcolor = readconfigvalue("matcolor", [1, 1, 1]);
-    matspec = readconfigvalue("matspec", 0.25);;
+    matcolor = readconfigvalue("matcolor", [.6, .6, .6]);
+    matspec = readconfigvalue("matspec", 0.15);;
     matgloss = readconfigvalue("matgloss", 0.65);;
     angle = readconfigvalue("angle", [45, -22.5]);
     angle[0] *= RAD;
