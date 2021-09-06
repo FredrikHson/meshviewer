@@ -646,6 +646,7 @@ function loop()
             {
                 setuniformf("materialcolor", 0.6, 0.6, 0.6);
                 setuniformmat4("modelview", mat4mul(floormat, view));
+                setuniformmat4("normalmodelview", mat4transpose(mat4invert(mat4mul(floormat, view))));
                 setuniformmat4("perspmodelview", perspfloorviewmat);
                 drawmesh(floor);
             }
