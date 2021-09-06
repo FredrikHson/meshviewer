@@ -1,8 +1,8 @@
 print("initing");
 RAD = 0.0174532925199;
 meshfilename = getoptionalstring("file", "");
-
-shadowbuffer = createrendertarget(2048, 2048, 1, GL_RGBA, GL_RGBA32F, 0);
+shadowbufres = 4096;
+shadowbuffer = createrendertarget(shadowbufres, shadowbufres, 1, GL_RED, GL_R32F, 0);
 gbuffer = createrendertarget(1, 1, 2, GL_RGBA, GL_RGBA32F, 1);
 accumbuffer = createrendertarget(1, 1, 1, GL_RGBA, GL_RGBA32F, 1);
 
@@ -537,6 +537,8 @@ function loop()
         lightvector = vec3mat4mul(lightvector, mat4invert((lightmat)));
         shadowview = mat4settranslation(0, 0, -2.0);
         shadowpersp = mat4setperspective(0.785398, 1, 0.1, 1000.0);
+        shadowjitter=2.0;
+        shadowpersp = mat4mul(shadowpersp, mat4settranslation(shadowjitter / shadowbufres * jitter[framenumber * 2], shadowjitter / shadowbufres * jitter[framenumber * 2 + 1], 0));
 
         if(use_shadows)
         {
