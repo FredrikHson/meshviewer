@@ -2,7 +2,7 @@ print("initing");
 RAD = 0.0174532925199;
 meshfilename = getoptionalstring("file", "");
 
-shadowbuffer = createrendertarget(1024, 1024, 1, GL_RGBA, GL_RGBA32F, 0);
+shadowbuffer = createrendertarget(2048, 2048, 1, GL_RGBA, GL_RGBA32F, 0);
 gbuffer = createrendertarget(1, 1, 2, GL_RGBA, GL_RGBA32F, 1);
 accumbuffer = createrendertarget(1, 1, 1, GL_RGBA, GL_RGBA32F, 1);
 
@@ -41,6 +41,8 @@ zoom = 0;
 up = "+Z";
 cavityscale = 0.5;
 grid = 0;
+use_shadows = 0;
+shadowangle = 1.0;
 calculatenormals = 0;
 jitter = [
              0.375, 0.4375,  0.625, 0.0625, 0.875, 0.1875, 0.125, 0.0625,
@@ -124,6 +126,8 @@ function loadconfig()
     pos = readconfigvalue("position", [0, 0]);
     up = readconfigvalue("up", "+Z");
     cavityscale = readconfigvalue("cavityscale", 0);
+    use_shadows = readconfigvalue("shadows", 0);
+    shadowangle = readconfigvalue("shadowangle", 1);
     calculatenormals = readconfigvalue("calculatenormals", 0);
 }
 
@@ -294,6 +298,12 @@ function handleinput()
     {
         hsv = rgb2hsv(matcolor);
         hsv[1] -= MOUSE_DELTA_X * 1 / WINDOW_WIDTH;
+
+        if(hsv[1] < 0.001)
+        {
+            hsv[1] = 0.001;
+        }
+
         matcolor = hsv2rgb(hsv);
     }
 
@@ -301,6 +311,12 @@ function handleinput()
     {
         hsv = rgb2hsv(matcolor);
         hsv[2] -= MOUSE_DELTA_X * 1 / WINDOW_WIDTH;
+
+        if(hsv[2] < 0.001)
+        {
+            hsv[2] = 0.001;
+        }
+
         matcolor = hsv2rgb(hsv);
     }
 
@@ -359,7 +375,7 @@ function handleinput()
         drawwireframe = !drawwireframe;
     }
 
-    if(KEY_S & PRESSED_NOW)
+    if(KEY_P & PRESSED_NOW)
     {
         print();
         print("\"angle\": [", angle[0] / RAD, ",", angle[1] / RAD, "],");
@@ -370,6 +386,8 @@ function handleinput()
         print("\"matspec\":", matspec, ",");
         print("\"position\":", pos, ",");
         print("\"zoom\":", zoom, ",");
+        print("\"shadows\":", use_shadows, ",");
+        print("\"shadowangle\":", shadowangle, ",");
         print();
         print(rgb2hsv(matcolor));
     }
@@ -383,6 +401,23 @@ function handleinput()
                 lightdir[0] -= MOUSE_DELTA_X * 0.01;
                 lightdir[1] -= MOUSE_DELTA_Y * 0.01;
             }
+        }
+
+        if(KEY_S & PRESSED)
+        {
+            shadowangle -= MOUSE_DELTA_X * 0.01;
+
+            if(shadowangle < 0)
+            {
+                shadowangle = 0;
+            }
+
+            if(shadowangle > 15.0)
+            {
+                shadowangle = 15.0;
+            }
+
+            print("shadowangle:" + shadowangle);
         }
 
         if(KEY_Z & PRESSED)
@@ -409,6 +444,11 @@ function handleinput()
                 angle[0] += MOUSE_DELTA_X * 0.01;
                 angle[1] += MOUSE_DELTA_Y * 0.01;
             }
+        }
+
+        if(KEY_S & PRESSED_NOW)
+        {
+            use_shadows = use_shadows ? 0 : 1;
         }
 
         if(KEY_Z & PRESSED)
@@ -475,38 +515,50 @@ function loop()
             break;
     }
 
-    model = mat4mul(model, mat4setrotation(angle[0], 0, 1, 0));
-    model = mat4mul(model, mat4setrotation(angle[1], 1, 0, 0));
-    shadowmat = model;
-    shadowmat = mat4mul(shadowmat, mat4setrotation(lightdir[0], 0, 1, 0));
-    shadowmat = mat4mul(shadowmat, mat4setrotation(lightdir[1], 1, 0, 0));
-    lightmat = mat4loadidentity();
-    lightmat  = mat4mul(lightmat, mat4setrotation(lightdir[0], 0, 1, 0));
-    lightmat  = mat4mul(lightmat, mat4setrotation(lightdir[1], 1, 0, 0));
-    lightvector = vec3mat4mul(lightvector, mat4invert((lightmat)));
-    beginpass(shadowbuffer);
-    {
-        wireframe(0);
-        depthtest(1);
-        culling(CULL_NONE);
-        clear(0, 0, 0, 1);
-        cleardepth();
-        view = mat4settranslation(0, 0, -2.0);
-        persp = mat4setperspective(0.785398, 1, 0.1, 1000.0);
-        bindshader(shadowbufshader);
-        bindattribute("in_Position", MESH_FLAG_POSITION);
-        bindattribute("in_Normals", MESH_FLAG_NORMAL);
-        setuniformmat4("modelview", mat4mul(shadowmat, view));
-        setuniformmat4("persp", persp);
-        drawmesh(mesh);
-        bindshader(-1);
-    }
-    endpass();
     maxsamples = Math.min(256, 256);
 
-    //for(framenumber = 0; framenumber < maxsamples; framenumber++)
     if(framenumber < maxsamples)
     {
+        lightangle = shadowangle * RAD;
+
+        if(!use_shadows)
+        {
+            lightangle = 0;
+        }
+
+        model = mat4mul(model, mat4setrotation(angle[0], 0, 1, 0));
+        model = mat4mul(model, mat4setrotation(angle[1], 1, 0, 0));
+        shadowmat = model;
+        shadowmat = mat4mul(shadowmat, mat4setrotation(lightdir[0] + jitter[framenumber * 2] * lightangle, 0, 1, 0));
+        shadowmat = mat4mul(shadowmat, mat4setrotation(lightdir[1] + jitter[framenumber * 2 + 1] * lightangle, 1, 0, 0));
+        lightmat = mat4loadidentity();
+        lightmat  = mat4mul(lightmat, mat4setrotation(lightdir[0] + jitter[framenumber * 2] * lightangle, 0, 1, 0));
+        lightmat  = mat4mul(lightmat, mat4setrotation(lightdir[1] + jitter[framenumber * 2 + 1] * lightangle, 1, 0, 0));
+        lightvector = vec3mat4mul(lightvector, mat4invert((lightmat)));
+        shadowview = mat4settranslation(0, 0, -2.0);
+        shadowpersp = mat4setperspective(0.785398, 1, 0.1, 1000.0);
+
+        if(use_shadows)
+        {
+            beginpass(shadowbuffer);
+            {
+                wireframe(0);
+                depthtest(1);
+                culling(CULL_NONE);
+                clear(0, 0, 0, 1);
+                cleardepth();
+                bindshader(shadowbufshader);
+                bindattribute("in_Position", MESH_FLAG_POSITION);
+                bindattribute("in_Normals", MESH_FLAG_NORMAL);
+                setuniformmat4("modelview", mat4mul(shadowmat, shadowview));
+                setuniformmat4("persp", shadowpersp);
+                drawmesh(mesh);
+                bindshader(-1);
+            }
+            endpass();
+        }
+
+        //for(framenumber = 0; framenumber < maxsamples; framenumber++)
         if(drawwireframe)
         {
             wireframe(1);
@@ -572,6 +624,7 @@ function loop()
             }
 
             perspmodelviewmat = mat4mul(mat4mul(model, view), persp);
+            perspshadowviewmat = mat4mul(mat4mul(shadowmat, view), persp);
             bindshader(deferred);
             bindattribute("in_Position", MESH_FLAG_POSITION);
             bindattribute("in_Uv", MESH_FLAG_TEXCOORD0);
@@ -579,14 +632,16 @@ function loop()
             setuniformf("spec", matspec);
             setuniformi("grid", grid);
             setuniformf("gloss", matgloss);
+            setuniformi("use_shadows", use_shadows);
             setuniformf("cavityscale", cavityscale + 0.5);
             setuniformf("clearcolor", clearcolor[0], clearcolor[1], clearcolor[2], clearcolor[3]);
             setuniformmat4("modelview", mat4mul(model, view));
-            setuniformmat4("shadowmodelview", mat4mul(shadowmat, view));
+            setuniformmat4("shadowmatrix", mat4mul(mat4mul(shadowmat, shadowview), shadowpersp));
             setuniformmat4("invfinal", mat4invert(perspmodelviewmat));
             setuniformf("aspect", RENDER_WIDTH / RENDER_HEIGHT);
             bindrendertarget("normal", gbuffer, 1);
             bindrendertarget("diffuse", gbuffer, 0);
+            bindrendertarget("shadow", shadowbuffer, 0);
             drawmesh(plane);
             bindshader(-1);
             //}

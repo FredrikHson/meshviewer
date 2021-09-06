@@ -1,6 +1,7 @@
 #version 440
 uniform sampler2D normal;
 uniform sampler2D diffuse;
+uniform sampler2D shadow;
 uniform float cavityscale = 1.0;
 uniform vec3 lightvector = vec3(0, 1, 1);
 uniform vec3 lightvector2 = vec3(0, 1, 0.25);
@@ -13,13 +14,16 @@ uniform vec3 materialcolor = vec3(0.8, 0.8, 0.8);
 uniform float gloss = 80.0;
 uniform float spec = 0.125;
 uniform bool grid = false;
+uniform bool use_shadows = false;
 #define PI 3.1415926538
 #define HPI 1.5707963269
 uniform mat4 invfinal;
+uniform mat4 shadowmatrix;
 uniform vec4 clearcolor;
 out vec4 color;
 in vec2 texcoord;
 uniform float aspect = 1;
+
 vec3 overlay(vec3 base, float blend)
 {
     vec3 fin;
@@ -81,7 +85,7 @@ vec3 halflambertlight(vec3 normal, vec3 dir, vec3 view, vec3 lc, vec3 mc)
 
     vec3 n = normalize(normal);
     vec3 ndir = normalize(dir);
-    float s = ggx(n, normalize(view), ndir, gloss, spec);
+    float s = ggx(n, normalize(view), ndir, gloss * 2, spec);
     float d = pow((dot(n, ndir) * 0.5 + 0.5), 2) * (1 - s);
     outcolor = vec3(d) * pow(lc, vec3(2.2)) * pow(mc, vec3(2.2));
     outcolor += vec3(s) * lc;
@@ -97,6 +101,20 @@ vec3 depthtoworldpos(float d)
     pos = invfinal * pos;
     pos.xyz /= pos.w;
     return pos.xyz ;
+}
+
+vec3 getshadowbuff(vec3 pos)
+{
+    vec4 shadowspacepos = shadowmatrix * vec4(pos, 1.0) ;
+    vec3 zcorrected = shadowspacepos.xyz / shadowspacepos.w;
+    float shadows = texture(shadow, zcorrected.xy * 0.5 + 0.5).x;
+
+    if(shadows < zcorrected.z - 0.00001)
+    {
+        return vec3(0);
+    }
+
+    return vec3(1);
 }
 
 void main()
@@ -130,10 +148,16 @@ void main()
         }
     }
 
-    //vec3 v = normalize(vec3((texcoord.x * 2 - 1) * aspect, (texcoord.y * 2 - 1), -nbuf.w*8));
     vec3 v = normalize(vec3((texcoord.x * 2 - 1) * aspect, (texcoord.y * 2 - 1), -1));
     tc.xyz = min(vec3(1), max(vec3(0), overlay(tc.xyz, cavity)));
-    l += light(tn, lightvector, v, lightcolor1, tc.xyz);
+    vec3 mainlight = light(tn, lightvector, v, lightcolor1, tc.xyz);
+
+    if(use_shadows)
+    {
+        mainlight *= getshadowbuff(pos);
+    }
+
+    l += mainlight;
     l += halflambertlight(tn, lightvector2, v, lightcolor2, tc.xyz);
     l += halflambertlight(tn, lightvector3, v, lightcolor3, tc.xyz);
     l += halflambertlight(tn, vec3(0, 0, 1), v, vec3(1, 1, 1) * 0.2, tc.xyz);
