@@ -30,6 +30,7 @@ shadowbufshader = loadshader("shadowbuf.vert", "shadowbuf.frag", 0, 0, 0);
 wireframeshader = loadshader("mesh.vert", "wireframe.frag", 0, 0, 0);
 blit = loadshader("blit.vert", "blit.frag", 0, 0, 0);
 drawwireframe = false;
+doublesided = 0;
 drawfloor = false;
 
 plane = generateplane(50);
@@ -133,6 +134,7 @@ function loadconfig()
     use_shadows = readconfigvalue("shadows", 0);
     shadowangle = readconfigvalue("shadowangle", 1);
     drawfloor = readconfigvalue("drawfloor", 0);
+    doublesided = readconfigvalue("doublesided", 0);
     calculatenormals = readconfigvalue("calculatenormals", 0);
 }
 
@@ -398,6 +400,7 @@ function handleinput()
         print("\"zoom\":", zoom, ",");
         print("\"shadows\":", use_shadows, ",");
         print("\"drawfloor\":", drawfloor, ",");
+        print("\"doublesided\":", doublesided, ",");
         print("\"shadowangle\":", shadowangle, ",");
         print();
         print(rgb2hsv(matcolor));
@@ -640,6 +643,7 @@ function loop()
             setuniformf("lightvector", lightvector.x, lightvector.y, lightvector.z);
             setuniformf("materialcolor", matcolor[0], matcolor[1], matcolor[2]);
             setuniformi("calculatenormals", calculatenormals);
+            setuniformi("doublesided", doublesided);
             drawmesh(mesh);
 
             if(drawfloor)
