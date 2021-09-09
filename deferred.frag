@@ -14,6 +14,7 @@ uniform vec3 materialcolor = vec3(0.8, 0.8, 0.8);
 uniform float gloss = 80.0;
 uniform float spec = 0.125;
 uniform bool grid = false;
+uniform bool colorgrid = false;
 uniform bool use_shadows = false;
 #define PI 3.1415926538
 #define HPI 1.5707963269
@@ -117,6 +118,17 @@ vec3 getshadowbuff(vec3 pos)
     return vec3(1);
 }
 
+float gridline(float p)
+{
+    float gridsize = 10.0;
+    p = (p / gridsize);
+    float x = fract(p);
+    x = min(x, 1.0 - x) * 2;
+    x = max(0, (x * 30) - 29);
+    x = min(1, x * 2);
+    return 1 - x;
+}
+
 void main()
 {
     float x = texture(normal, vec2(texcoord.x + dFdx(texcoord.x), texcoord.y)).x;
@@ -130,21 +142,24 @@ void main()
     vec3 l = vec3(0);
     vec3 pos = depthtoworldpos(nbuf.w);
 
-    if(nbuf.w < 1.0 && grid)
+    if(grid && nbuf.w < 1.0)
     {
-        if(fract(pos.x / 10) > 0.95)
+        if(colorgrid)
         {
-            tc.yz *= 0.15;
+            tc.xyz = mix(vec3(1, 0, 0), tc.xyz, gridline(pos.x));
+            tc.xyz = mix(vec3(0, 1, 0), tc.xyz, gridline(pos.y));
+            tc.xyz = mix(vec3(0, 0, 1), tc.xyz, gridline(pos.z));
         }
-
-        if(fract(pos.y / 10) > 0.95)
+        else
         {
-            tc.xz *= 0.15;
-        }
-
-        if(fract(pos.z / 10) > 0.95)
-        {
-            tc.xy *= 0.15;
+            if(length(tc.xyz) > 0.5)
+            {
+                tc.xyz = mix(vec3(0, 0, 0), tc.xyz, gridline(pos.x) * gridline(pos.y) * gridline(pos.z));
+            }
+            else
+            {
+                tc.xyz = mix(vec3(1, 1, 1), tc.xyz, gridline(pos.x) * gridline(pos.y) * gridline(pos.z));
+            }
         }
     }
 

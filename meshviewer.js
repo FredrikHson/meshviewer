@@ -46,6 +46,7 @@ zoom = 0;
 up = "+Z";
 cavityscale = 0.5;
 grid = 0;
+colorgrid = 0;
 use_shadows = 0;
 shadowangle = 1.0;
 calculatenormals = 0;
@@ -136,6 +137,7 @@ function loadconfig()
     drawfloor = readconfigvalue("drawfloor", 0);
     doublesided = readconfigvalue("doublesided", 0);
     calculatenormals = readconfigvalue("calculatenormals", 0);
+    colorgrid = readconfigvalue("colorgrid", 0);
 }
 
 //print(process.env);
@@ -289,11 +291,6 @@ var framenumber = 0;
 
 function handleinput()
 {
-    if(KEY_G & PRESSED_NOW)
-    {
-        grid = grid ? 0 : 1;
-    }
-
     if(KEY_1 & PRESSED)
     {
         hsv = rgb2hsv(matcolor);
@@ -448,6 +445,10 @@ function handleinput()
         {
             up = "-X";
         }
+    if(KEY_G & PRESSED_NOW)
+    {
+        colorgrid = colorgrid ? 0 : 1;
+    }
     }
     else
     {
@@ -490,6 +491,10 @@ function handleinput()
         {
             zoom += MOUSE_DELTA_Y * 0.01;
         }
+    if(KEY_G & PRESSED_NOW)
+    {
+        grid = grid ? 0 : 1;
+    }
     }
 
     if(KEY_ANY & PRESSED || MOUSE_ANY & PRESSED)
@@ -692,6 +697,7 @@ function loop()
             setuniformf("lightvector", lightvector.x, lightvector.y, lightvector.z);
             setuniformf("spec", matspec);
             setuniformi("grid", grid);
+            setuniformi("colorgrid", colorgrid);
             setuniformf("gloss", matgloss);
             setuniformi("use_shadows", use_shadows);
             setuniformf("cavityscale", cavityscale + 0.5);
