@@ -291,6 +291,7 @@ var framenumber = 0;
 
 function handleinput()
 {
+    setwindowtitle("meshviewer ".concat(meshfilename));
     if(KEY_1 & PRESSED)
     {
         hsv = rgb2hsv(matcolor);
@@ -416,19 +417,20 @@ function handleinput()
 
         if(KEY_S & PRESSED)
         {
-            shadowangle -= MOUSE_DELTA_X * 0.01;
+            shadowangle -= MOUSE_DELTA_X * 0.05;
 
             if(shadowangle < 0)
             {
                 shadowangle = 0;
             }
 
-            if(shadowangle > 15.0)
+            if(shadowangle > 90.0)
             {
-                shadowangle = 15.0;
+                shadowangle = 90.0;
             }
 
-            print("shadowangle:" + shadowangle);
+            setwindowtitle("shadowangle:".concat(shadowangle));
+            //print("shadowangle:" + shadowangle);
         }
 
         if(KEY_Z & PRESSED)
@@ -445,10 +447,11 @@ function handleinput()
         {
             up = "-X";
         }
-    if(KEY_G & PRESSED_NOW)
-    {
-        colorgrid = colorgrid ? 0 : 1;
-    }
+
+        if(KEY_G & PRESSED_NOW)
+        {
+            colorgrid = colorgrid ? 0 : 1;
+        }
     }
     else
     {
@@ -491,10 +494,11 @@ function handleinput()
         {
             zoom += MOUSE_DELTA_Y * 0.01;
         }
-    if(KEY_G & PRESSED_NOW)
-    {
-        grid = grid ? 0 : 1;
-    }
+
+        if(KEY_G & PRESSED_NOW)
+        {
+            grid = grid ? 0 : 1;
+        }
     }
 
     if(KEY_ANY & PRESSED || MOUSE_ANY & PRESSED)
