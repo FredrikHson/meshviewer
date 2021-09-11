@@ -628,7 +628,7 @@ function loop()
             if(framenumber < maxsamples)
             {
                 jittersize = 1.0;
-                squarepersp = mat4mul(persp, mat4settranslation(jittersize / RENDER_WIDTH * getcirclejitterx(framenumber), jittersize / RENDER_HEIGHT * getcirclejittery(framenumber), 0));
+                persp = mat4mul(persp, mat4settranslation(jittersize / RENDER_WIDTH * getsquarejitterx(framenumber), jittersize / RENDER_HEIGHT * getsquarejittery(framenumber), 0));
             }
 
             perspmodelviewmat = mat4mul(mat4mul(model, view), persp);
