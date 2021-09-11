@@ -50,12 +50,7 @@ colorgrid = 0;
 use_shadows = 0;
 shadowangle = 1.0;
 calculatenormals = 0;
-jitter = [
-             0.375, 0.4375,  0.625, 0.0625, 0.875, 0.1875, 0.125, 0.0625,
-             0.375, 0.6875, 0.875, 0.375, 0.625, 0.5625, 0.375, 0.9375,
-             0.625, 0.3125, 0.125, 0.5625, 0.125, 0.8325, 0.375, 0.1875,
-             0.875, 0.9375, 0.875, 0.6875, 0.125, 0.3125, 0.625, 0.8125
-          ];
+maxsamples = 65536;
 center = {x: 0, y: 0, z: 0};
 
 function readconfigvalue(configname, defvalue)
@@ -104,17 +99,6 @@ function loadconfig()
     catch(error)
     {
         print("failed to load config.json");
-    }
-
-    try
-    {
-        jsonstring = File.read("aasamples.json");
-        jitter = JSON.parse(jsonstring);
-        jsonstring = 0;
-    }
-    catch(error)
-    {
-        print("failed to load aasamples.json");
     }
 
     watchfile("config.json");
@@ -292,6 +276,7 @@ var framenumber = 0;
 function handleinput()
 {
     setwindowtitle("meshviewer ".concat(meshfilename));
+
     if(KEY_1 & PRESSED)
     {
         hsv = rgb2hsv(matcolor);
@@ -424,9 +409,9 @@ function handleinput()
                 shadowangle = 0;
             }
 
-            if(shadowangle > 90.0)
+            if(shadowangle > 360.0)
             {
-                shadowangle = 90.0;
+                shadowangle = 360.0;
             }
 
             setwindowtitle("shadowangle:".concat(shadowangle));
@@ -501,7 +486,15 @@ function handleinput()
         }
     }
 
-    if(KEY_ANY & PRESSED || MOUSE_ANY & PRESSED)
+    if(KEY_ANY & PRESSED)
+    {
+        if(framenumber > 15)
+        {
+            framenumber = 0;
+        }
+    }
+
+    if(MOUSE_ANY & PRESSED)
     {
         framenumber = 0;
     }
@@ -549,10 +542,9 @@ function loop()
             break;
     }
 
-    maxsamples = Math.min(256, 256);
-
     if(framenumber < maxsamples)
     {
+        //print(framenumber);
         lightangle = shadowangle * RAD;
 
         if(!use_shadows)
@@ -565,14 +557,14 @@ function loop()
         floormat = mat4mul(floormat, mat4setrotation(angle[0], 0, 1, 0));
         floormat = mat4mul(floormat, mat4setrotation(angle[1], 1, 0, 0));
         shadowfloormat = floormat;
-        shadowfloormat = mat4mul(shadowfloormat, mat4setrotation(lightdir[0] + jitter[framenumber * 2] * lightangle, 0, 1, 0));
-        shadowfloormat = mat4mul(shadowfloormat, mat4setrotation(lightdir[1] + jitter[framenumber * 2 + 1] * lightangle, 1, 0, 0));
+        shadowfloormat = mat4mul(shadowfloormat, mat4setrotation(lightdir[0] + getcirclejitterx(framenumber) * lightangle, 0, 1, 0));
+        shadowfloormat = mat4mul(shadowfloormat, mat4setrotation(lightdir[1] + getcirclejittery(framenumber) * lightangle, 1, 0, 0));
         shadowmat = model;
-        shadowmat = mat4mul(shadowmat, mat4setrotation(lightdir[0] + jitter[framenumber * 2] * lightangle, 0, 1, 0));
-        shadowmat = mat4mul(shadowmat, mat4setrotation(lightdir[1] + jitter[framenumber * 2 + 1] * lightangle, 1, 0, 0));
+        shadowmat = mat4mul(shadowmat, mat4setrotation(lightdir[0] + getcirclejitterx(framenumber) * lightangle, 0, 1, 0));
+        shadowmat = mat4mul(shadowmat, mat4setrotation(lightdir[1] + getcirclejittery(framenumber) * lightangle, 1, 0, 0));
         lightmat = mat4loadidentity();
-        lightmat  = mat4mul(lightmat, mat4setrotation(lightdir[0] + jitter[framenumber * 2] * lightangle, 0, 1, 0));
-        lightmat  = mat4mul(lightmat, mat4setrotation(lightdir[1] + jitter[framenumber * 2 + 1] * lightangle, 1, 0, 0));
+        lightmat  = mat4mul(lightmat, mat4setrotation(lightdir[0] + getcirclejitterx(framenumber) * lightangle, 0, 1, 0));
+        lightmat  = mat4mul(lightmat, mat4setrotation(lightdir[1] + getcirclejittery(framenumber) * lightangle, 1, 0, 0));
         lightvector = vec3mat4mul(lightvector, mat4invert((lightmat)));
 
         if(drawfloor)
@@ -586,7 +578,7 @@ function loop()
 
         shadowpersp = mat4setperspective(0.785398, 1, 0.1, 1000.0);
         shadowjitter = 2.0;
-        shadowpersp = mat4mul(shadowpersp, mat4settranslation(shadowjitter / shadowbufres * jitter[framenumber * 2], shadowjitter / shadowbufres * jitter[framenumber * 2 + 1], 0));
+        shadowpersp = mat4mul(shadowpersp, mat4settranslation(shadowjitter / shadowbufres * getsquarejitterx(framenumber), shadowjitter / shadowbufres * getsquarejittery(framenumber), 0));
 
         if(use_shadows)
         {
@@ -636,7 +628,7 @@ function loop()
             if(framenumber < maxsamples)
             {
                 jittersize = 1.0;
-                persp = mat4mul(persp, mat4settranslation(jittersize / RENDER_WIDTH * jitter[framenumber * 2], jittersize / RENDER_HEIGHT * jitter[framenumber * 2 + 1], 0));
+                squarepersp = mat4mul(persp, mat4settranslation(jittersize / RENDER_WIDTH * getcirclejitterx(framenumber), jittersize / RENDER_HEIGHT * getcirclejittery(framenumber), 0));
             }
 
             perspmodelviewmat = mat4mul(mat4mul(model, view), persp);
@@ -690,7 +682,7 @@ function loop()
 
             if(framenumber < maxsamples)
             {
-                persp = mat4mul(persp, mat4settranslation(1 / RENDER_WIDTH * jitter[framenumber * 2], 1 / RENDER_HEIGHT * jitter[framenumber * 2 + 1], 0));
+                persp = mat4mul(persp, mat4settranslation(1 / RENDER_WIDTH * getsquarejitterx(framenumber), 1 / RENDER_HEIGHT * getsquarejittery(framenumber), 0));
             }
 
             perspmodelviewmat = mat4mul(mat4mul(model, view), persp);
@@ -722,25 +714,28 @@ function loop()
         framenumber++;
     }
 
-    beginpass();
+    if((KEY_ANY & PRESSED) && framenumber == 15 || !(KEY_ANY & PRESSED) || MOUSE_ANY & PRESSED)
     {
-        depthtest(0);
-        blend(1);
-        blendfuncseparate(GL_ONE, GL_ONE_MINUS_SRC_ALPHA, GL_ONE, GL_ONE);
-        clear(clearcolor[0], clearcolor[1], clearcolor[2], clearcolor[3]);
-        culling(CULL_NONE);
-        cleardepth();
-        bindshader(post);
-        bindattribute("in_Position", MESH_FLAG_POSITION);
-        bindattribute("in_Uv", MESH_FLAG_TEXCOORD0);
-        setuniformf("samples", framenumber);
-        //print("numsamples:" ,framenumber);
-        bindrendertarget("diffuse", accumbuffer, 0);
-        drawmesh(plane);
-        bindshader(-1);
-        blend(0);
+        beginpass();
+        {
+            depthtest(0);
+            blend(1);
+            blendfuncseparate(GL_ONE, GL_ONE_MINUS_SRC_ALPHA, GL_ONE, GL_ONE);
+            clear(clearcolor[0], clearcolor[1], clearcolor[2], clearcolor[3]);
+            culling(CULL_NONE);
+            cleardepth();
+            bindshader(post);
+            bindattribute("in_Position", MESH_FLAG_POSITION);
+            bindattribute("in_Uv", MESH_FLAG_TEXCOORD0);
+            setuniformf("samples", framenumber);
+            //print("numsamples:" ,framenumber);
+            bindrendertarget("diffuse", accumbuffer, 0);
+            drawmesh(plane);
+            bindshader(-1);
+            blend(0);
+        }
+        endpass();
     }
-    endpass();
 
     if(KEY_D & PRESSED)
     {
