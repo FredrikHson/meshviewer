@@ -25,7 +25,6 @@ bbox = getmeshbbox(mesh);
 meshshader = loadshader("mesh.vert", "gbuf.frag", "mesh.geom", 0, 0);
 deferred = loadshader("blit.vert", "deferred.frag", 0, 0, 0);
 post = loadshader("blit.vert", "post.frag", 0, 0, 0);
-//deferred = loadshader("blit.vert", "worldspacerecovery.frag", 0, 0, 0);
 shadowbufshader = loadshader("shadowbuf.vert", "shadowbuf.frag", 0, 0, 0);
 wireframeshader = loadshader("mesh.vert", "wireframe.frag", 0, 0, 0);
 blit = loadshader("blit.vert", "blit.frag", 0, 0, 0);
@@ -75,6 +74,29 @@ function readconfigvalue(configname, defvalue)
         if(config[ext][configname] != undefined)
         {
             finalvalue = config[ext][configname];
+        }
+
+        if(config[ext]["folders"] != undefined)
+        {
+            splitpath = meshfilename.split("/");
+            folders = config[ext]["folders"];
+
+            for(i = splitpath.length; i > 0; i--)
+            {
+                for(name in folders)
+                {
+                    reg = new RegExp(name, "i");
+
+                    if(reg.test(splitpath[i])  == true)
+                    {
+                        if(folders[name][configname] != undefined)
+                        {
+                            finalvalue = folders[name][configname];
+                            return finalvalue;
+                        }
+                    }
+                }
+            }
         }
     }
 
@@ -739,6 +761,7 @@ function loop()
 
     if(KEY_D & PRESSED)
     {
+        framenumber = 0;
         debugmode(DEBUG_RENDERALLSTEPS);
         debugclip(1);
     }
