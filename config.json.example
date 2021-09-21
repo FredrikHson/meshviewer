@@ -1,0 +1,74 @@
+{
+    "defaults": {
+        "matcolor": [
+            0.7,
+            0.7,
+            1
+        ],
+        "angle": [
+            49.011,
+            -18.489
+        ],
+        "lightangle": [
+            -18.281,
+            -20.26
+        ],
+        "zoom": -1.68,
+        "cavityscale": 0.119,
+        "shadows": 1,
+        "shadowangle": 5,
+        "drawfloor": 1,
+        "matgloss": 0.73,
+        "doublesided": 1,
+        "colorgrid": 1,
+        "matspec": 0.041,
+        "clear": [
+            0.11,
+            0.118,
+            0.149,
+            1
+        ]
+    },
+    "stl": {
+        "calculatenormals": 1,
+        "matcolor": [
+            0.235,
+            0.571,
+            0.593
+        ],
+        "doublesided": 1,
+        "path": {
+            "bitethebullet": {
+                "up": "+Y"
+            },
+            ".*supported.*": {
+                "up": "+Z"
+            },
+            ".*_sup.*": {
+                "up": "+Z"
+            },
+            ".*pre.*": {
+                "up": "+Z"
+            }
+        }
+    },
+    "3mf": {
+        "calculatenormals": 1,
+        "matcolor": [
+            0.235,
+            0.593,
+            0.465
+        ],
+        "up": "+Y",
+        "doublesided": 1
+    },
+    "obj": {
+        "matcolor": [
+            0.466,
+            0.396,
+            0.311
+        ],
+        "doublesided": 1,
+        "up": "+Y"
+    }
+}

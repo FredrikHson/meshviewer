@@ -1,8 +1,13 @@
 print("initing");
 RAD = 0.0174532925199;
 meshfilename = getoptionalstring("file", "");
-shadowbufres = 4096;
-shadowbuffer = createrendertarget(shadowbufres, shadowbufres, 1, GL_RED, GL_R32F, 0);
+shadowbufres = [4096, 512, 512, 512];
+shadowbuffer = [
+                   createrendertarget(shadowbufres[0], shadowbufres[0], 1, GL_RED, GL_R32F, 0),
+                   createrendertarget(shadowbufres[1], shadowbufres[1], 1, GL_RED, GL_R32F, 0),
+                   createrendertarget(shadowbufres[2], shadowbufres[2], 1, GL_RED, GL_R32F, 0),
+                   createrendertarget(shadowbufres[3], shadowbufres[3], 1, GL_RED, GL_R32F, 0)
+                ];
 gbuffer = createrendertarget(1, 1, 2, GL_RGBA, GL_RGBA32F, 1);
 accumbuffer = createrendertarget(1, 1, 1, GL_RGBA, GL_RGBA32F, 1);
 floor = loadmesh("floor.obj");
@@ -31,6 +36,7 @@ blit = loadshader("blit.vert", "blit.frag", 0, 0, 0);
 drawwireframe = false;
 doublesided = 0;
 drawfloor = false;
+drawfloorshadowbuf = [false, false, false, false];
 
 plane = generateplane(50);
 
@@ -39,18 +45,39 @@ matcolor = [1, 1, 1];
 matgloss = 0.25;
 matspec = 0.1;
 angle = [45, 22.5];
-lightdir = [0, 0];
+lightdir = [[0, 0], [0, 0], [0, 0], [0, 0]];
+lightcolor = [[0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0]];
 pos = [0, 0];
 zoom = 0;
 up = "+Z";
 cavityscale = 0.5;
 grid = 0;
 colorgrid = 0;
-use_shadows = 0;
-shadowangle = 1.0;
+use_shadows = [0, 0, 0, 0];
+shadowangle = [1.0, 1.0, 1.0, 1.0];
 calculatenormals = 0;
 maxsamples = 65536;
 center = {x: 0, y: 0, z: 0};
+
+function getconfigvalue(configname, conf)
+{
+    splitname = configname.split(".");
+
+    for(i = 0; i < splitname.length; i++)
+    {
+        if(conf[splitname[i]] != undefined)
+        {
+            conf = conf[splitname[i]];
+        }
+        else
+        {
+            return undefined;
+        }
+    }
+
+    return conf;
+}
+
 
 function readconfigvalue(configname, defvalue)
 {
@@ -63,36 +90,41 @@ function readconfigvalue(configname, defvalue)
 
     if(config.defaults != undefined)
     {
-        if(config.defaults[configname] != undefined)
+        c = getconfigvalue(configname, config.defaults);
+
+        if(c != undefined)
         {
-            finalvalue = config.defaults[configname];
+            finalvalue = c;
         }
     }
 
     if(config[ext] != undefined)
     {
-        if(config[ext][configname] != undefined)
+        c = getconfigvalue(configname, config[ext]);
+
+        if(c != undefined)
         {
-            finalvalue = config[ext][configname];
+            finalvalue = c;
         }
 
-        if(config[ext]["folders"] != undefined)
+        if(config[ext]["path"] != undefined)
         {
             splitpath = meshfilename.split("/");
-            folders = config[ext]["folders"];
+            pathoverrides = config[ext]["path"];
 
             for(i = splitpath.length; i > 0; i--)
             {
-                for(name in folders)
+                for(name in pathoverrides)
                 {
                     reg = new RegExp(name, "i");
 
                     if(reg.test(splitpath[i])  == true)
                     {
-                        if(folders[name][configname] != undefined)
+                        c = getconfigvalue(configname, pathoverrides[name]);
+
+                        if(c != undefined)
                         {
-                            finalvalue = folders[name][configname];
-                            return finalvalue;
+                            return c;
                         }
                     }
                 }
@@ -117,36 +149,58 @@ function loadconfig()
         jsonstring = File.read("config.json");
         config = JSON.parse(jsonstring);
         jsonstring = 0;
+        watchfile("config.json");
     }
     catch(error)
     {
         print("failed to load config.json");
     }
 
-    watchfile("config.json");
-    matcolor = readconfigvalue("matcolor", [.6, .6, .6]);
-    matspec = readconfigvalue("matspec", 0.15);;
-    matgloss = readconfigvalue("matgloss", 0.65);;
-    angle = readconfigvalue("angle", [45, -22.5]);
-    angle[0] *= RAD;
-    angle[1] *= RAD;
-    lightdir = readconfigvalue("lightangle", [0, 0]);
-    lightdir[0] *= RAD;
-    lightdir[1] *= RAD;
-    zoom = readconfigvalue("zoom", -2);
+    matcolor = readconfigvalue("matcolor", [.62, .47, .32]);
+    matspec = readconfigvalue("matspec", 0.08);;
+    matgloss = readconfigvalue("matgloss", 0.7);;
+    angle = readconfigvalue("angle", [20, -6]);
+    lightdir[0] = readconfigvalue("light1.angle", [-20, -30]);
+    lightdir[1] = readconfigvalue("light2.angle", [-10, -50]);
+    lightdir[2] = readconfigvalue("light3.angle", [15, 48]);
+    lightdir[3] = readconfigvalue("light4.angle", [0, 0]);
+    lightcolor[0] = readconfigvalue("light1.color", [1, 1, 1]);
+    lightcolor[1] = readconfigvalue("light2.color", [0.4, 0.35, 0.35]);
+    lightcolor[2] = readconfigvalue("light3.color", [0.4, .3, 0]);
+    lightcolor[3] = readconfigvalue("light4.color", [0.3, 0.3, 0.3]);
+    shadowangle[0] = readconfigvalue("light1.shadowangle", 10);
+    shadowangle[1] = readconfigvalue("light2.shadowangle", 70);
+    shadowangle[2] = readconfigvalue("light3.shadowangle", 70);
+    shadowangle[3] = readconfigvalue("light4.shadowangle", 70);
+    use_shadows[0] = readconfigvalue("light1.shadows", 1);
+    use_shadows[1] = readconfigvalue("light2.shadows", 1);
+    use_shadows[2] = readconfigvalue("light3.shadows", 1);
+    use_shadows[3] = readconfigvalue("light4.shadows", 0);
+    drawfloorshadowbuf[0] = readconfigvalue("light1.floorshadows", 1);
+    drawfloorshadowbuf[1] = readconfigvalue("light2.floorshadows", 0);
+    drawfloorshadowbuf[2] = readconfigvalue("light3.floorshadows", 0);
+    drawfloorshadowbuf[3] = readconfigvalue("light4.floorshadows", 0);
+
+
+    zoom = readconfigvalue("zoom", -1.68);
     clearcolor = readconfigvalue("clear", [0, 0, 0, 1]);
     pos = readconfigvalue("position", [0, 0]);
     up = readconfigvalue("up", "+Z");
-    cavityscale = readconfigvalue("cavityscale", 0);
-    use_shadows = readconfigvalue("shadows", 0);
-    shadowangle = readconfigvalue("shadowangle", 1);
-    drawfloor = readconfigvalue("drawfloor", 0);
+    cavityscale = readconfigvalue("cavityscale", 0.08);
+    drawfloor = readconfigvalue("drawfloor", 1);
     doublesided = readconfigvalue("doublesided", 0);
     calculatenormals = readconfigvalue("calculatenormals", 0);
     colorgrid = readconfigvalue("colorgrid", 0);
+    // convert degress to radians
+    for(i = 0; i < 4; i++)
+    {
+        lightdir[i][0] *= RAD;
+        lightdir[i][1] *= RAD;
+    }
+    angle[0] *= RAD;
+    angle[1] *= RAD;
 }
 
-//print(process.env);
 loadconfig();
 
 
@@ -172,6 +226,7 @@ function setupcenter()
 }
 
 setupcenter();
+
 function rgb2hsv(ic)
 {
     out = [0, 0, 0];
@@ -397,7 +452,7 @@ function handleinput()
         print();
         print("\"angle\": [", angle[0] / RAD, ",", angle[1] / RAD, "],");
         print("\"cavityscale\":", cavityscale, ",");
-        print("\"lightangle\": [", lightdir[0] / RAD, ",", lightdir[1] / RAD, "],");
+        print("\"lightangle\": [", lightdir[0][0] / RAD, ",", lightdir[0][1] / RAD, "],");
         print("\"matcolor\":", matcolor, ",");
         print("\"matgloss\":", matgloss, ",");
         print("\"matspec\":", matspec, ",");
@@ -417,26 +472,26 @@ function handleinput()
         {
             if(MOUSE_1 & PRESSED)
             {
-                lightdir[0] -= MOUSE_DELTA_X * 0.01;
-                lightdir[1] -= MOUSE_DELTA_Y * 0.01;
+                lightdir[0][0] -= MOUSE_DELTA_X * 0.01;
+                lightdir[0][1] -= MOUSE_DELTA_Y * 0.01;
             }
         }
 
         if(KEY_S & PRESSED)
         {
-            shadowangle -= MOUSE_DELTA_X * 0.05;
+            shadowangle[0] -= MOUSE_DELTA_X * 0.05;
 
-            if(shadowangle < 0)
+            if(shadowangle[0] < 0)
             {
-                shadowangle = 0;
+                shadowangle[0] = 0;
             }
 
-            if(shadowangle > 360.0)
+            if(shadowangle[0] > 360.0)
             {
-                shadowangle = 360.0;
+                shadowangle[0] = 360.0;
             }
 
-            setwindowtitle("shadowangle:".concat(shadowangle));
+            setwindowtitle("shadowangle:".concat(shadowangle[0]));
             //print("shadowangle:" + shadowangle);
         }
 
@@ -473,7 +528,7 @@ function handleinput()
 
         if(KEY_S & PRESSED_NOW)
         {
-            use_shadows = use_shadows ? 0 : 1;
+            use_shadows[0] = use_shadows[0] ? 0 : 1;
         }
 
         if(KEY_Z & PRESSED)
@@ -525,7 +580,7 @@ function handleinput()
 function loop()
 {
     handleinput();
-    lightvector = {x: 0, y: 0, z: 1};
+    zlightvector = {x: 0, y: 0, z: 1};
     model = mat4loadidentity();
     model = mat4mul(model, mat4settranslation(-center.x, -center.y, -center.z));
     model = mat4mul(model, mat4setscale(1 / largestdist));
@@ -566,28 +621,32 @@ function loop()
 
     if(framenumber < maxsamples)
     {
-        //print(framenumber);
-        lightangle = shadowangle * RAD;
-
-        if(!use_shadows)
-        {
-            lightangle = 0;
-        }
-
         model = mat4mul(model, mat4setrotation(angle[0], 0, 1, 0));
         model = mat4mul(model, mat4setrotation(angle[1], 1, 0, 0));
         floormat = mat4mul(floormat, mat4setrotation(angle[0], 0, 1, 0));
         floormat = mat4mul(floormat, mat4setrotation(angle[1], 1, 0, 0));
-        shadowfloormat = floormat;
-        shadowfloormat = mat4mul(shadowfloormat, mat4setrotation(lightdir[0] + getcirclejitterx(framenumber) * lightangle, 0, 1, 0));
-        shadowfloormat = mat4mul(shadowfloormat, mat4setrotation(lightdir[1] + getcirclejittery(framenumber) * lightangle, 1, 0, 0));
-        shadowmat = model;
-        shadowmat = mat4mul(shadowmat, mat4setrotation(lightdir[0] + getcirclejitterx(framenumber) * lightangle, 0, 1, 0));
-        shadowmat = mat4mul(shadowmat, mat4setrotation(lightdir[1] + getcirclejittery(framenumber) * lightangle, 1, 0, 0));
-        lightmat = mat4loadidentity();
-        lightmat  = mat4mul(lightmat, mat4setrotation(lightdir[0] + getcirclejitterx(framenumber) * lightangle, 0, 1, 0));
-        lightmat  = mat4mul(lightmat, mat4setrotation(lightdir[1] + getcirclejittery(framenumber) * lightangle, 1, 0, 0));
-        lightvector = vec3mat4mul(lightvector, mat4invert((lightmat)));
+        shadowfloormat = Array(4);
+        shadowmat = Array(4);
+        shadowpersp = Array(4);
+        lightvector = Array(4);
+        shadowjitter = 2.0;
+        unmodshadowpersp = mat4setperspective(0.785398, 1, 0.1, 1000.0);
+
+        for(i = 0; i < 4; i++)
+        {
+            lightangle = shadowangle[i] * RAD;
+            shadowfloormat[i] = floormat;
+            shadowfloormat[i] = mat4mul(shadowfloormat[i], mat4setrotation(lightdir[i][0] + getcirclejitterx(framenumber) * lightangle, 0, 1, 0));
+            shadowfloormat[i] = mat4mul(shadowfloormat[i], mat4setrotation(lightdir[i][1] + getcirclejittery(framenumber) * lightangle, 1, 0, 0));
+            shadowmat[i] = model;
+            shadowmat[i] = mat4mul(shadowmat[i], mat4setrotation(lightdir[i][0] + getcirclejitterx(framenumber) * lightangle, 0, 1, 0));
+            shadowmat[i] = mat4mul(shadowmat[i], mat4setrotation(lightdir[i][1] + getcirclejittery(framenumber) * lightangle, 1, 0, 0));
+            lightmat = mat4loadidentity();
+            lightmat  = mat4mul(lightmat, mat4setrotation(lightdir[i][0] + getcirclejitterx(framenumber) * lightangle, 0, 1, 0));
+            lightmat  = mat4mul(lightmat, mat4setrotation(lightdir[i][1] + getcirclejittery(framenumber) * lightangle, 1, 0, 0));
+            lightvector[i] = vec3mat4mul(zlightvector, mat4invert((lightmat)));
+            shadowpersp[i] = mat4mul(unmodshadowpersp, mat4settranslation(shadowjitter / shadowbufres[i] * getsquarejitterx(framenumber), shadowjitter / shadowbufres[i] * getsquarejittery(framenumber), 0));
+        }
 
         if(drawfloor)
         {
@@ -598,39 +657,37 @@ function loop()
             shadowview = mat4settranslation(0, 0, -2.0);
         }
 
-        shadowpersp = mat4setperspective(0.785398, 1, 0.1, 1000.0);
-        shadowjitter = 2.0;
-        shadowpersp = mat4mul(shadowpersp, mat4settranslation(shadowjitter / shadowbufres * getsquarejitterx(framenumber), shadowjitter / shadowbufres * getsquarejittery(framenumber), 0));
-
-        if(use_shadows)
+        for(i = 0; i < 4; i++)
         {
-            beginpass(shadowbuffer);
+            if(use_shadows[i])
             {
-                wireframe(0);
-                depthtest(1);
-                culling(CULL_NONE);
-                clear(1, 0, 0, 1);
-                cleardepth();
-                bindshader(shadowbufshader);
-                bindattribute("in_Position", MESH_FLAG_POSITION);
-                bindattribute("in_Normals", MESH_FLAG_NORMAL);
-                setuniformmat4("modelview", mat4mul(shadowmat, shadowview));
-                setuniformmat4("persp", shadowpersp);
-                drawmesh(mesh);
-
-                if(drawfloor)
+                beginpass(shadowbuffer[i]);
                 {
-                    setuniformmat4("modelview", mat4mul(shadowfloormat, shadowview));
-                    setuniformmat4("persp", shadowpersp);
-                    drawmesh(floor);
-                }
+                    wireframe(0);
+                    depthtest(1);
+                    culling(CULL_NONE);
+                    clear(1, 0, 0, 1);
+                    cleardepth();
+                    bindshader(shadowbufshader);
+                    bindattribute("in_Position", MESH_FLAG_POSITION);
+                    bindattribute("in_Normals", MESH_FLAG_NORMAL);
+                    setuniformmat4("modelview", mat4mul(shadowmat[i], shadowview));
+                    setuniformmat4("persp", shadowpersp[i]);
+                    drawmesh(mesh);
 
-                bindshader(-1);
+                    if(drawfloor && drawfloorshadowbuf[i])
+                    {
+                        setuniformmat4("modelview", mat4mul(shadowfloormat[i], shadowview));
+                        setuniformmat4("persp", shadowpersp[i]);
+                        drawmesh(floor);
+                    }
+
+                    bindshader(-1);
+                }
+                endpass();
             }
-            endpass();
         }
 
-        //for(framenumber = 0; framenumber < maxsamples; framenumber++)
         if(drawwireframe)
         {
             wireframe(1);
@@ -642,7 +699,6 @@ function loop()
             culling(CULL_BACK);
             clear(0, 0, 0, 0);
             clear(0, 0, 0, 1, 1);
-            //clear(0.0, 0.0, 0.0, 0.0);
             cleardepth();
             view = mat4settranslation(pos[0], pos[1], zoom);
             persp = mat4setperspective(0.785398, RENDER_WIDTH / RENDER_HEIGHT, 0.1, 1000.0);
@@ -663,7 +719,6 @@ function loop()
             setuniformmat4("perspmodelview", perspmodelviewmat);
             setuniformmat4("shadowmodelview", mat4mul(shadowmat, view));
             setuniformmat4("persp", persp);
-            setuniformf("lightvector", lightvector.x, lightvector.y, lightvector.z);
             setuniformf("materialcolor", matcolor[0], matcolor[1], matcolor[2]);
             setuniformi("calculatenormals", calculatenormals);
             setuniformi("doublesided", doublesided);
@@ -691,9 +746,6 @@ function loop()
                 clear(0, 0, 0, 0);
             }
 
-            //if(framenumber < 16)
-            //{
-            //framenumber += 1;
             blend(1);
             blendfunc(GL_ONE, GL_ONE);
             blendfuncseparate(GL_ONE, GL_ONE, GL_ONE, GL_ONE);
@@ -712,24 +764,39 @@ function loop()
             bindshader(deferred);
             bindattribute("in_Position", MESH_FLAG_POSITION);
             bindattribute("in_Uv", MESH_FLAG_TEXCOORD0);
-            setuniformf("lightvector", lightvector.x, lightvector.y, lightvector.z);
+            setuniformf("lightvector", lightvector[0].x, lightvector[0].y, lightvector[0].z);
+            setuniformf("lightvector1", lightvector[1].x, lightvector[1].y, lightvector[1].z);
+            setuniformf("lightvector2", lightvector[2].x, lightvector[2].y, lightvector[2].z);
+            setuniformf("lightvector3", lightvector[3].x, lightvector[3].y, lightvector[3].z);
+            setuniformf("lightcolor", lightcolor[0][0], lightcolor[0][1], lightcolor[0][2]);
+            setuniformf("lightcolor1", lightcolor[1][0], lightcolor[1][1], lightcolor[1][2]);
+            setuniformf("lightcolor2", lightcolor[2][0], lightcolor[2][1], lightcolor[2][2]);
+            setuniformf("lightcolor3", lightcolor[3][0], lightcolor[3][1], lightcolor[3][2]);
             setuniformf("spec", matspec);
             setuniformi("grid", grid);
             setuniformi("colorgrid", colorgrid);
             setuniformf("gloss", matgloss);
-            setuniformi("use_shadows", use_shadows);
+            setuniformi("use_shadows", use_shadows[0]);
+            setuniformi("use_shadows1", use_shadows[1]);
+            setuniformi("use_shadows2", use_shadows[2]);
+            setuniformi("use_shadows3", use_shadows[3]);
             setuniformf("cavityscale", cavityscale + 0.5);
             setuniformf("clearcolor", clearcolor[0], clearcolor[1], clearcolor[2], clearcolor[3]);
             setuniformmat4("modelview", mat4mul(model, view));
-            setuniformmat4("shadowmatrix", mat4mul(mat4mul(shadowmat, shadowview), shadowpersp));
+            setuniformmat4("shadowmatrix", mat4mul(mat4mul(shadowmat[0], shadowview), shadowpersp[0]));
+            setuniformmat4("shadowmatrix1", mat4mul(mat4mul(shadowmat[1], shadowview), shadowpersp[1]));
+            setuniformmat4("shadowmatrix2", mat4mul(mat4mul(shadowmat[2], shadowview), shadowpersp[2]));
+            setuniformmat4("shadowmatrix3", mat4mul(mat4mul(shadowmat[3], shadowview), shadowpersp[3]));
             setuniformmat4("invfinal", mat4invert(perspmodelviewmat));
             setuniformf("aspect", RENDER_WIDTH / RENDER_HEIGHT);
             bindrendertarget("normal", gbuffer, 1);
             bindrendertarget("diffuse", gbuffer, 0);
-            bindrendertarget("shadow", shadowbuffer, 0, GL_LINEAR, GL_LINEAR, GL_CLAMP_TO_EDGE, GL_CLAMP_TO_EDGE);
+            bindrendertarget("shadowbuf", shadowbuffer[0], 0, GL_LINEAR, GL_LINEAR, GL_CLAMP_TO_EDGE, GL_CLAMP_TO_EDGE);
+            bindrendertarget("shadowbuf1", shadowbuffer[1], 0, GL_LINEAR, GL_LINEAR, GL_CLAMP_TO_EDGE, GL_CLAMP_TO_EDGE);
+            bindrendertarget("shadowbuf2", shadowbuffer[2], 0, GL_LINEAR, GL_LINEAR, GL_CLAMP_TO_EDGE, GL_CLAMP_TO_EDGE);
+            bindrendertarget("shadowbuf3", shadowbuffer[3], 0, GL_LINEAR, GL_LINEAR, GL_CLAMP_TO_EDGE, GL_CLAMP_TO_EDGE);
             drawmesh(plane);
             bindshader(-1);
-            //}
             blend(0);
         }
         endpass();
@@ -750,7 +817,6 @@ function loop()
             bindattribute("in_Position", MESH_FLAG_POSITION);
             bindattribute("in_Uv", MESH_FLAG_TEXCOORD0);
             setuniformf("samples", framenumber);
-            //print("numsamples:" ,framenumber);
             bindrendertarget("diffuse", accumbuffer, 0);
             drawmesh(plane);
             bindshader(-1);
@@ -770,15 +836,10 @@ function loop()
         debugmode(DEBUG_OFF);
     }
 
-    //debugmode(DEBUG_RENDERALLSTEPS);
-
     if(KEY_Q & PRESSED)
     {
         exit();
     }
-
-    //debugrange(-10,100);
-    //debugrange(-0.010,0.01);
 }
 
 function resize()
