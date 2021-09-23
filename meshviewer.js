@@ -12,6 +12,12 @@ gbuffer = createrendertarget(1, 1, 2, GL_RGBA, GL_RGBA32F, 1);
 accumbuffer = createrendertarget(1, 1, 1, GL_RGBA, GL_RGBA32F, 1);
 floor = loadmesh("floor.obj");
 
+icontex = loadimage("icons.png");
+iconshader = loadshader("icons.vert", "icons.frag", 0, 0, 0);
+
+manipmode = 0;
+lightmanip = 0;
+
 
 
 if(meshfilename == "")
@@ -42,11 +48,13 @@ plane = generateplane(50);
 
 clearcolor = [ 0, 0, 0, 0 ];
 matcolor = [1, 1, 1];
+floorcolor = [1, 1, 1];
 matgloss = 0.25;
 matspec = 0.1;
 angle = [45, 22.5];
 lightdir = [[0, 0], [0, 0], [0, 0], [0, 0]];
 lightcolor = [[0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0]];
+lightpower = [1, 1, 1, 1];
 pos = [0, 0];
 zoom = 0;
 up = "+Z";
@@ -58,6 +66,79 @@ shadowangle = [1.0, 1.0, 1.0, 1.0];
 calculatenormals = 0;
 maxsamples = 65536;
 center = {x: 0, y: 0, z: 0};
+drawicontimer = 69;
+lightisolation = [1, 1, 1, 1];
+
+interactiveframes = 10;
+instantfeedback = true;
+
+function drawicon()
+{
+    drawicontimer += DELTA_TIME;
+
+    if(drawicontimer > 2)
+    {
+        return;
+    }
+
+    // icons
+    bindshader(iconshader);
+    blend(1);
+    blendfuncseparate(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_ONE, GL_ONE);
+    bindattribute("in_Position", MESH_FLAG_POSITION);
+    bindattribute("in_Uv", MESH_FLAG_TEXCOORD0);
+    setuniformf("div", 4, 2);
+    bindtexture("tex", icontex);
+
+    switch(manipmode)
+    {
+        case 0:
+            setuniformf("materialcolor", matcolor[0], matcolor[1], matcolor[2]);
+            setuniformf("icon", 0, 1);
+            break;
+
+        case 1:
+            setuniformf("materialcolor", lightcolor[0][0]*lightpower[0], lightcolor[0][1]*lightpower[0], lightcolor[0][2]*lightpower[0]);
+            setuniformf("icon", 1, 1);
+            break;
+
+        case 2:
+            setuniformf("materialcolor", lightcolor[1][0]*lightpower[1], lightcolor[1][1]*lightpower[1], lightcolor[1][2]*lightpower[1]);
+            setuniformf("icon", 2, 1);
+            break;
+
+        case 3:
+            setuniformf("materialcolor", lightcolor[2][0]*lightpower[2], lightcolor[2][1]*lightpower[2], lightcolor[2][2]*lightpower[2]);
+            setuniformf("icon", 3, 1);
+            break;
+
+        case 4:
+            setuniformf("materialcolor", lightcolor[3][0]*lightpower[3], lightcolor[3][1]*lightpower[3], lightcolor[3][2]*lightpower[3]);
+            setuniformf("icon", 0, 0);
+            break;
+
+        case 5:
+            setuniformf("materialcolor", floorcolor[0], floorcolor[1], floorcolor[2]);
+            setuniformf("icon", 1, 0);
+            break;
+
+        case 6:
+            setuniformf("materialcolor", clearcolor[0], clearcolor[1], clearcolor[2]);
+            setuniformf("icon", 2, 0);
+            break;
+
+        default:
+            setuniformf("materialcolor", 1, 1, 1);
+    }
+
+    iconmat = mat4setscale(1 / RENDER_WIDTH * 128, 1 / RENDER_HEIGHT * 128, 1);
+    iconmat = mat4mul(iconmat, mat4settranslation(-1, 1, 0));
+    iconmat = mat4mul(mat4settranslation(1, -1, 0), iconmat);
+    setuniformmat4("matrix", iconmat);
+    drawmesh(plane);
+    bindshader(-1);
+    blend(0);
+}
 
 function getconfigvalue(configname, conf)
 {
@@ -157,6 +238,7 @@ function loadconfig()
     }
 
     matcolor = readconfigvalue("matcolor", [.62, .47, .32]);
+    floorcolor = readconfigvalue("floorcolor", [.6, .6, .6]);
     matspec = readconfigvalue("matspec", 0.08);;
     matgloss = readconfigvalue("matgloss", 0.7);;
     angle = readconfigvalue("angle", [20, -6]);
@@ -165,9 +247,9 @@ function loadconfig()
     lightdir[2] = readconfigvalue("light3.angle", [15, 48]);
     lightdir[3] = readconfigvalue("light4.angle", [0, 0]);
     lightcolor[0] = readconfigvalue("light1.color", [1, 1, 1]);
-    lightcolor[1] = readconfigvalue("light2.color", [0.4, 0.35, 0.35]);
-    lightcolor[2] = readconfigvalue("light3.color", [0.4, .3, 0]);
-    lightcolor[3] = readconfigvalue("light4.color", [0.3, 0.3, 0.3]);
+    lightcolor[1] = readconfigvalue("light2.color", [1, 0.875, 0.875]);
+    lightcolor[2] = readconfigvalue("light3.color", [1, 0.75, 0]);
+    lightcolor[3] = readconfigvalue("light4.color", [1, 1, 1]);
     shadowangle[0] = readconfigvalue("light1.shadowangle", 10);
     shadowangle[1] = readconfigvalue("light2.shadowangle", 70);
     shadowangle[2] = readconfigvalue("light3.shadowangle", 70);
@@ -176,6 +258,10 @@ function loadconfig()
     use_shadows[1] = readconfigvalue("light2.shadows", 1);
     use_shadows[2] = readconfigvalue("light3.shadows", 1);
     use_shadows[3] = readconfigvalue("light4.shadows", 0);
+    lightpower[0] = readconfigvalue("light1.power", 1);
+    lightpower[1] = readconfigvalue("light2.power", 0.4);
+    lightpower[2] = readconfigvalue("light3.power", 0.4);
+    lightpower[3] = readconfigvalue("light4.power", 0.4);
     drawfloorshadowbuf[0] = readconfigvalue("light1.floorshadows", 1);
     drawfloorshadowbuf[1] = readconfigvalue("light2.floorshadows", 0);
     drawfloorshadowbuf[2] = readconfigvalue("light3.floorshadows", 0);
@@ -349,19 +435,208 @@ function hsv2rgb(ic)
 }
 
 var framenumber = 0;
+var anykeypressed = false;
 
-function handleinput()
+function keycombo(key, shift, alt, ctrl, test)
 {
-    setwindowtitle("meshviewer ".concat(meshfilename));
+    var pressedkey = false;
 
-    if(KEY_1 & PRESSED)
+    if(key & test)
+    {
+        pressedkey = true;
+    }
+
+    if((KEY_LEFT_SHIFT & PRESSED || KEY_RIGHT_SHIFT & PRESSED))
+    {
+        if(!shift)
+        {
+            pressedkey = false;
+        }
+    }
+    else if(shift)
+    {
+        pressedkey = false;
+    }
+
+    if((KEY_LEFT_CONTROL & PRESSED || KEY_RIGHT_CONTROL & PRESSED))
+    {
+        if(!ctrl)
+        {
+            pressedkey = false;
+        }
+    }
+    else if(ctrl)
+    {
+        pressedkey = false;
+    }
+
+    if((KEY_LEFT_ALT & PRESSED || KEY_RIGHT_ALT & PRESSED))
+    {
+        if(!alt)
+        {
+            pressedkey = false;
+        }
+    }
+    else if(alt)
+    {
+        pressedkey = false;
+    }
+
+    if(pressedkey)
+    {
+        if(framenumber > interactiveframes)
+        {
+            framenumber = 0;
+        }
+
+        anykeypressed = true;
+    }
+
+    return pressedkey;
+}
+
+function instantchange()
+{
+    if(!(MOUSE_DELTA_X == 0 && MOUSE_DELTA_Y == 0))
+    {
+        instantfeedback = true;
+    }
+}
+function modeswitch()
+{
+    if(keycombo(KEY_1, false, false, true, PRESSED))
+    {
+        manipmode = 0;
+        drawicontimer = 0;
+    }
+
+    if(keycombo(KEY_2, false, false, true, PRESSED))
+    {
+        manipmode = 1;
+        lightmanip = 0;
+        drawicontimer = 0;
+    }
+
+    if(keycombo(KEY_3, false, false, true, PRESSED))
+    {
+        manipmode = 2;
+        lightmanip = 1;
+        drawicontimer = 0;
+    }
+
+    if(keycombo(KEY_4, false, false, true, PRESSED))
+    {
+        manipmode = 3;
+        lightmanip = 2;
+        drawicontimer = 0;
+    }
+
+    if(keycombo(KEY_5, false, false, true, PRESSED))
+    {
+        manipmode = 4;
+        lightmanip = 3;
+        drawicontimer = 0;
+    }
+
+    if(keycombo(KEY_6, false, false, true, PRESSED))
+    {
+        manipmode = 5;
+        drawicontimer = 0;
+    }
+
+    if(keycombo(KEY_7, false, false, true, PRESSED))
+    {
+        manipmode = 6;
+        drawicontimer = 0;
+    }
+}
+
+function manipulatelight()
+{
+    if(keycombo(KEY_1, false, false, false, PRESSED))
+    {
+        hsv = rgb2hsv(lightcolor[lightmanip]);
+        hsv[0] -= MOUSE_DELTA_X * 1 / WINDOW_WIDTH * 360;
+        hsv[2] = 1;
+        lightcolor[lightmanip] = hsv2rgb(hsv);
+        drawicontimer = 0;
+        instantchange();
+    }
+
+    if(keycombo(KEY_2, false, false, false, PRESSED))
+    {
+        hsv = rgb2hsv(lightcolor[lightmanip]);
+        hsv[1] -= MOUSE_DELTA_X * 1 / WINDOW_WIDTH;
+        hsv[2] = 1;
+
+        if(hsv[1] < 0.001)
+        {
+            hsv[1] = 0.001;
+        }
+
+        lightcolor[lightmanip] = hsv2rgb(hsv);
+        drawicontimer = 0;
+        instantchange();
+    }
+
+    if(keycombo(KEY_3, false, false, false, PRESSED))
+    {
+        lightpower[lightmanip] -= MOUSE_DELTA_X * 1 / WINDOW_WIDTH;
+
+        if(lightpower[lightmanip] < 0)
+        {
+            lightpower[lightmanip] = 0;
+        }
+
+        if(lightpower[lightmanip] > 100.0)
+        {
+            lightpower[lightmanip] = 100.0;
+        }
+
+        drawicontimer = 0;
+        instantchange();
+    }
+
+    if(keycombo(KEY_4, false, false, false, PRESSED))
+    {
+        shadowangle[lightmanip] -= MOUSE_DELTA_X * 0.05;
+
+        if(shadowangle[lightmanip] < 0)
+        {
+            shadowangle[lightmanip] = 0;
+        }
+
+        if(shadowangle[lightmanip] > 360.0)
+        {
+            shadowangle[lightmanip] = 360.0;
+        }
+
+        setwindowtitle("shadowangle:".concat(shadowangle[0]));
+    }
+
+    if(keycombo(KEY_5, false, false, false, PRESSED_NOW))
+    {
+        use_shadows[lightmanip] = use_shadows[lightmanip] ? 0 : 1;
+    }
+
+    if(keycombo(KEY_6, false, false, false, PRESSED_NOW))
+    {
+        drawfloorshadowbuf[lightmanip] = drawfloorshadowbuf[lightmanip] ? 0 : 1;
+    }
+}
+
+function manipulatematerial()
+{
+    if(keycombo(KEY_1, false, false, false, PRESSED))
     {
         hsv = rgb2hsv(matcolor);
         hsv[0] -= MOUSE_DELTA_X * 1 / WINDOW_WIDTH * 360;
         matcolor = hsv2rgb(hsv);
+        drawicontimer = 0;
+        instantchange();
     }
 
-    if(KEY_2 & PRESSED)
+    if(keycombo(KEY_2, false, false, false, PRESSED))
     {
         hsv = rgb2hsv(matcolor);
         hsv[1] -= MOUSE_DELTA_X * 1 / WINDOW_WIDTH;
@@ -372,9 +647,11 @@ function handleinput()
         }
 
         matcolor = hsv2rgb(hsv);
+        drawicontimer = 0;
+        instantchange();
     }
 
-    if(KEY_3 & PRESSED)
+    if(keycombo(KEY_3, false, false, false, PRESSED))
     {
         hsv = rgb2hsv(matcolor);
         hsv[2] -= MOUSE_DELTA_X * 1 / WINDOW_WIDTH;
@@ -385,9 +662,11 @@ function handleinput()
         }
 
         matcolor = hsv2rgb(hsv);
+        drawicontimer = 0;
+        instantchange();
     }
 
-    if(KEY_4 & PRESSED)
+    if(keycombo(KEY_4, false, false, false, PRESSED))
     {
         matspec -= MOUSE_DELTA_X * 1 / WINDOW_WIDTH;
 
@@ -400,9 +679,11 @@ function handleinput()
         {
             matspec = 0.0;
         }
+
+        drawicontimer = 0;
     }
 
-    if(KEY_5 & PRESSED)
+    if(keycombo(KEY_5, false, false, false, PRESSED))
     {
         matgloss -= MOUSE_DELTA_X * 1 / WINDOW_WIDTH;
 
@@ -415,10 +696,13 @@ function handleinput()
         {
             matgloss = 0.005;
         }
+
+        drawicontimer = 0;
     }
 
-    if(KEY_C & PRESSED)
+    if(keycombo(KEY_C, false, false, false, PRESSED))
     {
+        instantchange();
         cavityscale -= MOUSE_DELTA_X * 4 / WINDOW_WIDTH;
 
         if(cavityscale < 0)
@@ -431,152 +715,312 @@ function handleinput()
             cavityscale = 4;
         }
     }
+}
 
-    if(KEY_R & PRESSED_NOW)
+function manipulatefloor()
+{
+    if(keycombo(KEY_1, false, false, false, PRESSED))
+    {
+        hsv = rgb2hsv(floorcolor);
+        hsv[0] -= MOUSE_DELTA_X * 1 / WINDOW_WIDTH * 360;
+        floorcolor = hsv2rgb(hsv);
+        drawicontimer = 0;
+        instantchange();
+    }
+
+    if(keycombo(KEY_2, false, false, false, PRESSED))
+    {
+        hsv = rgb2hsv(floorcolor);
+        hsv[1] -= MOUSE_DELTA_X * 1 / WINDOW_WIDTH;
+
+        if(hsv[1] < 0.001)
+        {
+            hsv[1] = 0.001;
+        }
+
+        floorcolor = hsv2rgb(hsv);
+        drawicontimer = 0;
+        instantchange();
+    }
+
+    if(keycombo(KEY_3, false, false, false, PRESSED))
+    {
+        hsv = rgb2hsv(floorcolor);
+        hsv[2] -= MOUSE_DELTA_X * 1 / WINDOW_WIDTH;
+
+        if(hsv[2] < 0.001)
+        {
+            hsv[2] = 0.001;
+        }
+
+        floorcolor = hsv2rgb(hsv);
+        drawicontimer = 0;
+        instantchange();
+    }
+}
+
+function manipulateclear()
+{
+    if(keycombo(KEY_1, false, false, false, PRESSED))
+    {
+        hsv = rgb2hsv(clearcolor);
+        hsv[0] -= MOUSE_DELTA_X * 1 / WINDOW_WIDTH * 360;
+        alpha = clearcolor[3];
+        clearcolor = hsv2rgb(hsv);
+        clearcolor[3] = alpha;
+        drawicontimer = 0;
+        instantchange();
+    }
+
+    if(keycombo(KEY_2, false, false, false, PRESSED))
+    {
+        hsv = rgb2hsv(clearcolor);
+        hsv[1] -= MOUSE_DELTA_X * 1 / WINDOW_WIDTH;
+
+        if(hsv[1] < 0.001)
+        {
+            hsv[1] = 0.001;
+        }
+
+        alpha = clearcolor[3];
+        clearcolor = hsv2rgb(hsv);
+        clearcolor[3] = alpha;
+        drawicontimer = 0;
+        instantchange();
+    }
+
+    if(keycombo(KEY_3, false, false, false, PRESSED))
+    {
+        hsv = rgb2hsv(clearcolor);
+        hsv[2] -= MOUSE_DELTA_X * 1 / WINDOW_WIDTH;
+
+        if(hsv[2] < 0.001)
+        {
+            hsv[2] = 0.001;
+        }
+
+        alpha = clearcolor[3];
+        clearcolor = hsv2rgb(hsv);
+        clearcolor[3] = alpha;
+        drawicontimer = 0;
+        instantchange();
+    }
+
+    if(keycombo(KEY_4, false, false, false, PRESSED))
+    {
+        clearcolor[3] -= MOUSE_DELTA_X * 1 / WINDOW_WIDTH;
+
+        if(clearcolor[3] > 1.0)
+        {
+            clearcolor[3] = 1.0;
+        }
+
+        if(clearcolor[3] < 0.0)
+        {
+            clearcolor[3] = 0.0;
+        }
+
+        instantchange();
+    }
+}
+
+
+function handleinput()
+{
+    anykeypressed = false;
+    instantfeedback = false;
+    setwindowtitle("meshviewer ".concat(meshfilename));
+    modeswitch();
+
+    switch(manipmode)
+    {
+        case 0:
+            manipulatematerial();
+            break;
+
+        case 1:
+        case 2:
+        case 3:
+        case 4:
+            manipulatelight();
+            break;
+
+        case 5:
+            manipulatefloor();
+            break;
+
+        case 6:
+            manipulateclear();
+            break;
+    }
+
+    if(keycombo(KEY_R, false, false, false, PRESSED_NOW))
     {
         loadconfig();
     }
 
-    if(KEY_W & PRESSED_NOW)
+    if(keycombo(KEY_W, false, false, false, PRESSED_NOW))
     {
         drawwireframe = !drawwireframe;
+        instantfeedback = true;
     }
 
-    if(KEY_F & PRESSED_NOW)
+    if(keycombo(KEY_F, false, false, false, PRESSED_NOW))
     {
         drawfloor = !drawfloor;
+        instantfeedback = true;
     }
 
-    if(KEY_P & PRESSED_NOW)
+    if(keycombo(KEY_I, false, false, false, PRESSED_NOW))
+    {
+        alreadyisolated = false;
+        instantfeedback = true;
+
+        for(i = 0; i < 4; i++)
+        {
+            if(lightisolation[i] == 0)
+            {
+                alreadyisolated = true;
+            }
+        }
+
+        if(alreadyisolated)
+        {
+            for(i = 0; i < 4; i++)
+            {
+                lightisolation[i] = 1;
+            }
+        }
+        else
+        {
+            for(i = 0; i < 4; i++)
+            {
+                lightisolation[i] = 0;
+            }
+
+            lightisolation[lightmanip] = 1;
+        }
+    }
+
+    if(keycombo(KEY_P, false, false, false, PRESSED_NOW))
     {
         print();
-        print("\"angle\": [", angle[0] / RAD, ",", angle[1] / RAD, "],");
-        print("\"cavityscale\":", cavityscale, ",");
-        print("\"lightangle\": [", lightdir[0][0] / RAD, ",", lightdir[0][1] / RAD, "],");
+        print("{");
         print("\"matcolor\":", matcolor, ",");
-        print("\"matgloss\":", matgloss, ",");
+        print("\"floorcolor\":", floorcolor, ",");
         print("\"matspec\":", matspec, ",");
-        print("\"position\":", pos, ",");
+        print("\"matgloss\":", matgloss, ",");
+        print("\"angle\":", angle, ",");
+
+        for(i = 0; i < 4; i++)
+        {
+            print("\"light" + (i + 1) + "\":{");
+            print("\"angle\":", lightdir[0], ",");
+            print("\"color\":", lightcolor[0], ",");
+            print("\"shadowangle\":", shadowangle[0], ",");
+            print("\"shadows\":", use_shadows[0], ",");
+            print("\"power\":", lightpower[0], ",");
+            print("\"floorshadows\":", drawfloorshadowbuf[0]);
+            print("},");
+        }
+
         print("\"zoom\":", zoom, ",");
-        print("\"shadows\":", use_shadows, ",");
+        print("\"clear\":", clearcolor, ",");
+        print("\"position\":", pos, ",");
+        print("\"up\":" + "\"" + up + "\",");
+        print("\"cavityscale\":", cavityscale, ",");
         print("\"drawfloor\":", drawfloor, ",");
         print("\"doublesided\":", doublesided, ",");
-        print("\"shadowangle\":", shadowangle, ",");
+        print("\"calculatenormals\":", calculatenormals, ",");
+        print("\"colorgrid\":", colorgrid);
+        print("}");
         print();
-        print(rgb2hsv(matcolor));
     }
 
-    if((KEY_LEFT_SHIFT & PRESSED || KEY_RIGHT_SHIFT & PRESSED))
+    if(MOUSE_INSIDE)
     {
-        if(MOUSE_INSIDE)
+        if(keycombo(MOUSE_1, true, false, false, PRESSED))
         {
-            if(MOUSE_1 & PRESSED)
+            lightdir[lightmanip][0] -= MOUSE_DELTA_X * 0.01;
+            lightdir[lightmanip][1] -= MOUSE_DELTA_Y * 0.01;
+
+            if(!(MOUSE_DELTA_X == 0 && MOUSE_DELTA_Y == 0))
             {
-                lightdir[0][0] -= MOUSE_DELTA_X * 0.01;
-                lightdir[0][1] -= MOUSE_DELTA_Y * 0.01;
+                instantfeedback = true;
             }
         }
 
-        if(KEY_S & PRESSED)
+        if(keycombo(MOUSE_1, false, false, false, PRESSED))
         {
-            shadowangle[0] -= MOUSE_DELTA_X * 0.05;
+            angle[0] += MOUSE_DELTA_X * 0.01;
+            angle[1] += MOUSE_DELTA_Y * 0.01;
 
-            if(shadowangle[0] < 0)
+            if(!(MOUSE_DELTA_X == 0 && MOUSE_DELTA_Y == 0))
             {
-                shadowangle[0] = 0;
+                instantfeedback = true;
             }
-
-            if(shadowangle[0] > 360.0)
-            {
-                shadowangle[0] = 360.0;
-            }
-
-            setwindowtitle("shadowangle:".concat(shadowangle[0]));
-            //print("shadowangle:" + shadowangle);
-        }
-
-        if(KEY_Z & PRESSED)
-        {
-            up = "-Z";
-        }
-
-        if(KEY_Y & PRESSED)
-        {
-            up = "-Y";
-        }
-
-        if(KEY_X & PRESSED)
-        {
-            up = "-X";
-        }
-
-        if(KEY_G & PRESSED_NOW)
-        {
-            colorgrid = colorgrid ? 0 : 1;
-        }
-    }
-    else
-    {
-        if(MOUSE_INSIDE)
-        {
-            if(MOUSE_1 & PRESSED)
-            {
-                angle[0] += MOUSE_DELTA_X * 0.01;
-                angle[1] += MOUSE_DELTA_Y * 0.01;
-            }
-        }
-
-        if(KEY_S & PRESSED_NOW)
-        {
-            use_shadows[0] = use_shadows[0] ? 0 : 1;
-            use_shadows[1] = use_shadows[1] ? 0 : 1;
-            use_shadows[2] = use_shadows[2] ? 0 : 1;
-            use_shadows[3] = use_shadows[3] ? 0 : 1;
-        }
-
-        if(KEY_Z & PRESSED)
-        {
-            up = "+Z";
-        }
-
-        if(KEY_Y & PRESSED)
-        {
-            up = "+Y";
-        }
-
-        if(KEY_X & PRESSED)
-        {
-            up = "+X";
-        }
-
-        if(MOUSE_3 & PRESSED)
-        {
-            pos[0] -= MOUSE_DELTA_X * 0.004;
-            pos[1] += MOUSE_DELTA_Y * 0.004;
-        }
-
-        if(MOUSE_2 & PRESSED)
-        {
-            zoom += MOUSE_DELTA_Y * 0.01;
-        }
-
-        if(KEY_G & PRESSED_NOW)
-        {
-            grid = grid ? 0 : 1;
         }
     }
 
-    if(KEY_ANY & PRESSED)
+    if(keycombo(KEY_Z, true, false, false, PRESSED))
     {
-        if(framenumber > 15)
+        up = "-Z";
+    }
+
+    if(keycombo(KEY_Y, true, false, false, PRESSED))
+    {
+        up = "-Y";
+    }
+
+    if(keycombo(KEY_X, true, false, false, PRESSED))
+    {
+        up = "-X";
+    }
+
+    if(keycombo(KEY_G, true, false, false, PRESSED_NOW))
+    {
+        colorgrid = colorgrid ? 0 : 1;
+    }
+
+    if(keycombo(KEY_Z, false, false, false, PRESSED))
+    {
+        up = "+Z";
+    }
+
+    if(keycombo(KEY_Y, false, false, false, PRESSED))
+    {
+        up = "+Y";
+    }
+
+    if(keycombo(KEY_X, false, false, false, PRESSED))
+    {
+        up = "+X";
+    }
+
+    if(keycombo(MOUSE_3, false, false, false, PRESSED))
+    {
+        pos[0] -= MOUSE_DELTA_X * 0.004;
+        pos[1] += MOUSE_DELTA_Y * 0.004;
+
+        if(!(MOUSE_DELTA_X == 0 && MOUSE_DELTA_Y == 0))
         {
-            framenumber = 0;
+            instantfeedback = true;
         }
     }
 
-    if(MOUSE_ANY & PRESSED)
+    if(keycombo(MOUSE_2, false, false, false, PRESSED))
     {
-        framenumber = 0;
+        zoom += MOUSE_DELTA_Y * 0.01;
+
+        if(MOUSE_DELTA_Y != 0)
+        {
+            instantfeedback = true;
+        }
+    }
+
+    if(keycombo(KEY_G, false, false, false, PRESSED_NOW))
+    {
+        grid = grid ? 0 : 1;
     }
 }
 
@@ -620,6 +1064,11 @@ function loop()
         case "+Y":
             floormat = mat4mul(floormat, mat4settranslation(0, -(ydist / largestdist) / 2, 0));
             break;
+    }
+
+    if(instantfeedback)
+    {
+        framenumber = 0;
     }
 
     if(framenumber < maxsamples)
@@ -729,7 +1178,7 @@ function loop()
 
             if(drawfloor)
             {
-                setuniformf("materialcolor", 0.6, 0.6, 0.6);
+                setuniformf("materialcolor", floorcolor[0], floorcolor[1], floorcolor[2]);
                 setuniformmat4("modelview", mat4mul(floormat, view));
                 setuniformmat4("normalmodelview", mat4transpose(mat4invert(mat4mul(floormat, view))));
                 setuniformmat4("perspmodelview", perspfloorviewmat);
@@ -771,10 +1220,10 @@ function loop()
             setuniformf("lightvector1", lightvector[1].x, lightvector[1].y, lightvector[1].z);
             setuniformf("lightvector2", lightvector[2].x, lightvector[2].y, lightvector[2].z);
             setuniformf("lightvector3", lightvector[3].x, lightvector[3].y, lightvector[3].z);
-            setuniformf("lightcolor", lightcolor[0][0], lightcolor[0][1], lightcolor[0][2]);
-            setuniformf("lightcolor1", lightcolor[1][0], lightcolor[1][1], lightcolor[1][2]);
-            setuniformf("lightcolor2", lightcolor[2][0], lightcolor[2][1], lightcolor[2][2]);
-            setuniformf("lightcolor3", lightcolor[3][0], lightcolor[3][1], lightcolor[3][2]);
+            setuniformf("lightcolor",  lightcolor[0][0]*lightpower[0]*lightisolation[0], lightcolor[0][1]*lightpower[0]*lightisolation[0], lightcolor[0][2]*lightpower[0]*lightisolation[0]);
+            setuniformf("lightcolor1", lightcolor[1][0]*lightpower[1]*lightisolation[1], lightcolor[1][1]*lightpower[1]*lightisolation[1], lightcolor[1][2]*lightpower[1]*lightisolation[1]);
+            setuniformf("lightcolor2", lightcolor[2][0]*lightpower[2]*lightisolation[2], lightcolor[2][1]*lightpower[2]*lightisolation[2], lightcolor[2][2]*lightpower[2]*lightisolation[2]);
+            setuniformf("lightcolor3", lightcolor[3][0]*lightpower[3]*lightisolation[3], lightcolor[3][1]*lightpower[3]*lightisolation[3], lightcolor[3][2]*lightpower[3]*lightisolation[3]);
             setuniformf("spec", matspec);
             setuniformi("grid", grid);
             setuniformi("colorgrid", colorgrid);
@@ -806,7 +1255,7 @@ function loop()
         framenumber++;
     }
 
-    if((KEY_ANY & PRESSED) && framenumber == 15 || !(KEY_ANY & PRESSED) || MOUSE_ANY & PRESSED)
+    if(anykeypressed && framenumber == interactiveframes || !anykeypressed || instantfeedback)
     {
         beginpass();
         {
@@ -824,6 +1273,7 @@ function loop()
             drawmesh(plane);
             bindshader(-1);
             blend(0);
+            drawicon();
         }
         endpass();
     }

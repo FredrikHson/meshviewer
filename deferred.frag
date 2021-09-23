@@ -99,7 +99,7 @@ vec3 depthtoworldpos(float d)
     return pos.xyz ;
 }
 
-vec3 getshadowbuff(vec3 pos, mat4 smat, sampler2D sbuf,bool s)
+vec3 getshadowbuff(vec3 pos, mat4 smat, sampler2D sbuf, bool s)
 {
     if(!s)
     {
@@ -146,19 +146,21 @@ void main()
     {
         if(colorgrid)
         {
-            tc.xyz = mix(vec3(1, 0, 0), tc.xyz, gridline(pos.x));
-            tc.xyz = mix(vec3(0, 1, 0), tc.xyz, gridline(pos.y));
-            tc.xyz = mix(vec3(0, 0, 1), tc.xyz, gridline(pos.z));
+            vec3 gridcolor = {1, 1, 1};
+            gridcolor.yz =  color.yz * (gridline(pos.x) < 0.999 ? 0.0 : 1.0);
+            gridcolor.xz =  color.xz * (gridline(pos.y) < 0.999 ? 0.0 : 1.0);
+            gridcolor.xy =  color.xy * (gridline(pos.z) < 0.999 ? 0.0 : 1.0);
+            tc.xyz = mix(gridcolor, tc.xyz, gridline(pos.x) * gridline(pos.y) * gridline(pos.z));
         }
         else
         {
             if(length(tc.xyz) > 0.5)
             {
-                tc.xyz = mix(vec3(0, 0, 0), tc.xyz, gridline(pos.x) * gridline(pos.y) * gridline(pos.z));
+                tc.xyz = mix(vec3(0, 0, 0), tc.xyz, pow((gridline(pos.x) + gridline(pos.y) + gridline(pos.z)) / 3, 2));
             }
             else
             {
-                tc.xyz = mix(vec3(1, 1, 1), tc.xyz, gridline(pos.x) * gridline(pos.y) * gridline(pos.z));
+                tc.xyz = mix(vec3(1, 1, 1), tc.xyz, pow((gridline(pos.x) + gridline(pos.y) + gridline(pos.z)) / 3, 2));
             }
         }
     }

@@ -65,8 +65,6 @@ vec3 sRGBToLinear(vec3 color)
 void main()
 {
     vec4 incolor = texture(background, vec2(texcoord.x, texcoord.y)) / samples;
-    color = incolor;
-    //color=pow(color,vec4(1/2.2));
-    color.xyz = LinearTosRGB(ACESFitted(color.xyz));
-    color.w=incolor.w;
+    color.xyz = LinearTosRGB(ACESFitted(incolor.xyz));
+    color.w = incolor.w;
 }

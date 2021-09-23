@@ -18,10 +18,15 @@ void newvert(int index, vec3 n, float backside)
 {
     gl_Position = gl_in[index].gl_Position;
     position = v_position[index];
-    if(backside<0)
-    vcolor=1-materialcolor;
+
+    if(backside < 0)
+    {
+        vcolor = 1 - materialcolor;
+    }
     else
-    vcolor=materialcolor;
+    {
+        vcolor = materialcolor;
+    }
 
     if(!calculatenormals)
     {
