@@ -1,7 +1,7 @@
 print("initing");
 RAD = 0.0174532925199;
 meshfilename = getoptionalstring("file", "");
-shadowbufres = [4096, 512, 512, 512];
+shadowbufres = [4096, 1024, 1024, 1024];
 shadowbuffer = [
                    createrendertarget(shadowbufres[0], shadowbufres[0], 1, GL_RED, GL_R32F, 0),
                    createrendertarget(shadowbufres[1], shadowbufres[1], 1, GL_RED, GL_R32F, 0),
@@ -180,8 +180,6 @@ function loadconfig()
     drawfloorshadowbuf[1] = readconfigvalue("light2.floorshadows", 0);
     drawfloorshadowbuf[2] = readconfigvalue("light3.floorshadows", 0);
     drawfloorshadowbuf[3] = readconfigvalue("light4.floorshadows", 0);
-
-
     zoom = readconfigvalue("zoom", -1.68);
     clearcolor = readconfigvalue("clear", [0, 0, 0, 1]);
     pos = readconfigvalue("position", [0, 0]);
@@ -191,12 +189,14 @@ function loadconfig()
     doublesided = readconfigvalue("doublesided", 0);
     calculatenormals = readconfigvalue("calculatenormals", 0);
     colorgrid = readconfigvalue("colorgrid", 0);
+
     // convert degress to radians
     for(i = 0; i < 4; i++)
     {
         lightdir[i][0] *= RAD;
         lightdir[i][1] *= RAD;
     }
+
     angle[0] *= RAD;
     angle[1] *= RAD;
 }
@@ -529,6 +529,9 @@ function handleinput()
         if(KEY_S & PRESSED_NOW)
         {
             use_shadows[0] = use_shadows[0] ? 0 : 1;
+            use_shadows[1] = use_shadows[1] ? 0 : 1;
+            use_shadows[2] = use_shadows[2] ? 0 : 1;
+            use_shadows[3] = use_shadows[3] ? 0 : 1;
         }
 
         if(KEY_Z & PRESSED)
@@ -856,6 +859,8 @@ function filechange(filename)
         loadconfig();
     }
 
+    bbox = getmeshbbox(mesh);
+    setupcenter();
     framenumber = 0;
 }
 
