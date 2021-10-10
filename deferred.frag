@@ -84,7 +84,7 @@ vec3 light(vec3 normal, vec3 dir, vec3 view, vec3 lc, vec3 mc)
     float s = ggx(n, normalize(view), ndir, gloss, spec);
     float d = max(0, dot(n, ndir)) * (1 - s);
     outcolor = vec3(d) * pow(lc, vec3(2.2)) * pow(mc, vec3(2.2));
-    outcolor += vec3(s) * lc;
+    outcolor += vec3(s) * pow(lc, vec3(2.2));
     return outcolor;
 }
 

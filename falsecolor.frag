@@ -1,5 +1,6 @@
 #version 440
 uniform sampler2D image;
+uniform sampler2D falsecolorgradient;
 out vec4 color;
 in vec2 texcoord;
 uniform float samples = 1;
@@ -20,6 +21,12 @@ const mat3 ACESOutputMat =
     {-0.53108,  1.10813, -0.07276},
     {-0.07367, -0.00605,  1.07602}
 };
+const mat3 FalseColor =
+{
+    {0.2126729, 0.7151521, 0.0721750},
+    {0.2126729, 0.7151521, 0.0721750},
+    {0.2126729, 0.7151521, 0.0721750}
+};
 
 vec3 RRTAndODTFit(vec3 v)
 {
@@ -30,9 +37,11 @@ vec3 RRTAndODTFit(vec3 v)
 
 vec3 ACESFitted(vec3 color)
 {
+    //color = color * ACESInputMat;
     color =  ACESInputMat * color;
     // Apply RRT and ODT
     color = RRTAndODTFit(color);
+    //color = color * ACESOutputMat ;
     color =  ACESOutputMat * color ;
     // Clamp to [0, 1]
     color = clamp(color, 0.0, 1.0);
@@ -65,6 +74,7 @@ void main()
 {
     vec4 incolor = texture(image, vec2(texcoord.x, texcoord.y)) / samples;
     color.xyz = LinearTosRGB(ACESFitted(incolor.xyz * exposure));
-    //color.xyz = incolor.xyz;
+    color.xyz *= FalseColor;
+    color = texture(falsecolorgradient, vec2(color.x, 0));
     color.w = incolor.w;
 }

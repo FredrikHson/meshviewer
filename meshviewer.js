@@ -10,9 +10,14 @@ shadowbuffer = [
                 ];
 gbuffer = createrendertarget(1, 1, 2, GL_RGBA, GL_RGBA32F, 1);
 accumbuffer = createrendertarget(1, 1, 1, GL_RGBA, GL_RGBA32F, 1);
+gibuffer = [
+               createrendertarget(1, 1, 1, GL_RGBA, GL_RGBA32F, 1),
+               createrendertarget(1, 1, 1, GL_RGBA, GL_RGBA32F, 1)
+            ];
 floor = loadmesh("floor.obj");
 
 icontex = loadimage("icons.png");
+falsecolor = loadimage("gradient.png");
 iconshader = loadshader("icons.vert", "icons.frag", 0, 0, 0);
 
 manipmode = 0;
@@ -35,7 +40,9 @@ ext = meshfilename.substr(meshfilename.lastIndexOf('.') + 1).toLowerCase();
 bbox = getmeshbbox(mesh);
 meshshader = loadshader("mesh.vert", "gbuf.frag", "mesh.geom", 0, 0);
 deferred = loadshader("blit.vert", "deferred.frag", 0, 0, 0);
+ssgi = loadshader("blit.vert", "ssgi.frag", 0, 0, 0);
 post = loadshader("blit.vert", "post.frag", 0, 0, 0);
+postfalsecolor = loadshader("blit.vert", "falsecolor.frag", 0, 0, 0);
 shadowbufshader = loadshader("shadowbuf.vert", "shadowbuf.frag", 0, 0, 0);
 wireframeshader = loadshader("mesh.vert", "wireframe.frag", 0, 0, 0);
 blit = loadshader("blit.vert", "blit.frag", 0, 0, 0);
@@ -65,12 +72,17 @@ use_shadows = [0, 0, 0, 0];
 shadowangle = [1.0, 1.0, 1.0, 1.0];
 calculatenormals = 0;
 maxsamples = 65536;
+//maxsamples = 64;
 center = {x: 0, y: 0, z: 0};
 drawicontimer = 69;
 lightisolation = [1, 1, 1, 1];
+exposure = 1;
 
 interactiveframes = 10;
 instantfeedback = true;
+enablegi = 0;
+indirectstr = 1;
+drawfalsecolors = false;
 
 function drawicon()
 {
@@ -275,6 +287,9 @@ function loadconfig()
     doublesided = readconfigvalue("doublesided", 0);
     calculatenormals = readconfigvalue("calculatenormals", 0);
     colorgrid = readconfigvalue("colorgrid", 0);
+    exposure = readconfigvalue("exposure", 1);
+    enablegi = readconfigvalue("ssgi", 0);
+    maxsamples = readconfigvalue("maxsamples", 65536);
 
     // convert degress to radians
     for(i = 0; i < 4; i++)
@@ -681,6 +696,7 @@ function manipulatematerial()
         }
 
         drawicontimer = 0;
+        instantchange();
     }
 
     if(keycombo(KEY_5, false, false, false, PRESSED))
@@ -698,6 +714,7 @@ function manipulatematerial()
         }
 
         drawicontimer = 0;
+        instantchange();
     }
 
     if(keycombo(KEY_C, false, false, false, PRESSED))
@@ -714,6 +731,8 @@ function manipulatematerial()
         {
             cavityscale = 4;
         }
+
+        instantchange();
     }
 }
 
@@ -854,6 +873,49 @@ function handleinput()
             break;
     }
 
+    if(keycombo(KEY_S, true, false, false, PRESSED_NOW))
+    {
+        enablegi = enablegi ? 0 : 1;
+        print("enable ssgi:" + enablegi);
+    }
+
+    if(keycombo(KEY_S, false, false, false, PRESSED))
+    {
+        indirectstr -= MOUSE_DELTA_X * 4 / WINDOW_WIDTH;
+
+        if(indirectstr < 0)
+        {
+            indirectstr = 0;
+        }
+
+        if(indirectstr > 100.0)
+        {
+            indirectstr = 100.0;
+        }
+    }
+
+    if(keycombo(KEY_E, false, false, false, PRESSED))
+    {
+        exposure -= MOUSE_DELTA_X / WINDOW_WIDTH;
+
+        if(exposure < 0)
+        {
+            exposure = 0;
+        }
+
+        if(exposure > 100.0)
+        {
+            exposure = 100.0;
+        }
+
+        instantfeedback = true;
+    }
+
+    if(keycombo(KEY_E, true, false, false, PRESSED_NOW))
+    {
+        drawfalsecolors = !drawfalsecolors;
+    }
+
     if(keycombo(KEY_R, false, false, false, PRESSED_NOW))
     {
         loadconfig();
@@ -910,17 +972,17 @@ function handleinput()
         print("\"floorcolor\":", floorcolor, ",");
         print("\"matspec\":", matspec, ",");
         print("\"matgloss\":", matgloss, ",");
-        print("\"angle\":", angle, ",");
+        print("\"angle\": [", angle[0] / RAD, ",", angle[1] / RAD, "],");
 
         for(i = 0; i < 4; i++)
         {
             print("\"light" + (i + 1) + "\":{");
-            print("\"angle\":", lightdir[0], ",");
-            print("\"color\":", lightcolor[0], ",");
-            print("\"shadowangle\":", shadowangle[0], ",");
-            print("\"shadows\":", use_shadows[0], ",");
-            print("\"power\":", lightpower[0], ",");
-            print("\"floorshadows\":", drawfloorshadowbuf[0]);
+            print("\"angle\": [", lightdir[i][0] / RAD, ",", lightdir[i][1] / RAD, "],");
+            print("\"color\":", lightcolor[i], ",");
+            print("\"shadowangle\":", shadowangle[i], ",");
+            print("\"shadows\":", use_shadows[i], ",");
+            print("\"power\":", lightpower[i], ",");
+            print("\"floorshadows\":", drawfloorshadowbuf[i]);
             print("},");
         }
 
@@ -933,6 +995,9 @@ function handleinput()
         print("\"doublesided\":", doublesided, ",");
         print("\"calculatenormals\":", calculatenormals, ",");
         print("\"colorgrid\":", colorgrid);
+        print("\"ssgi\":", enablegi);
+        print("\"exposure\":", exposure);
+        print("\"maxsamples\":", maxsamples);
         print("}");
         print();
     }
@@ -1189,16 +1254,14 @@ function loop()
         }
         endpass();
         wireframe(0);
-        beginpass(accumbuffer);
+        beginpass(gibuffer[0]);
         {
             depthtest(0);
-
-            if(framenumber == 0)
+            //if(framenumber == 0)
             {
                 clear(0, 0, 0, 0);
             }
-
-            blend(1);
+            blend(0);
             blendfunc(GL_ONE, GL_ONE);
             blendfuncseparate(GL_ONE, GL_ONE, GL_ONE, GL_ONE);
             culling(CULL_NONE);
@@ -1252,6 +1315,81 @@ function loop()
             blend(0);
         }
         endpass();
+    }
+
+    finalbounce = false;
+    maxbounces = 4;
+
+    if(framenumber < maxsamples)
+    {
+        if(enablegi == false)
+        {
+            maxbounces = 1;
+        }
+
+        for(i = 0; i < maxbounces; i++)
+        {
+            if(i == maxbounces - 1)
+            {
+                beginpass(accumbuffer);
+                finalbounce = true;
+            }
+            else
+            {
+                beginpass(gibuffer[(i + 1) % 2]);
+            }
+
+            {
+                depthtest(0);
+
+                if(framenumber == 0 || finalbounce != true)
+                {
+                    clear(0, 0, 0, 0);
+                }
+
+                if(finalbounce)
+                {
+                    blend(1);
+                    blendfunc(GL_ONE, GL_ONE);
+                    blendfuncseparate(GL_ONE, GL_ONE, GL_ONE, GL_ONE);
+                }
+                else
+                {
+                    blend(0);
+                }
+
+                culling(CULL_NONE);
+                cleardepth();
+                view = mat4settranslation(pos[0], pos[1], zoom);
+                persp = mat4setperspective(0.785398, RENDER_WIDTH / RENDER_HEIGHT, 0.1, 1000.0);
+
+                if(framenumber < maxsamples)
+                {
+                    persp = mat4mul(persp, mat4settranslation(1 / RENDER_WIDTH * getsquarejitterx(framenumber), 1 / RENDER_HEIGHT * getsquarejittery(framenumber), 0));
+                }
+
+                perspmodelviewmat = mat4mul(mat4mul(model, view), persp);
+                perspshadowviewmat = mat4mul(mat4mul(shadowmat, view), persp);
+                bindshader(ssgi);
+                bindattribute("in_Position", MESH_FLAG_POSITION);
+                bindattribute("in_Uv", MESH_FLAG_TEXCOORD0);
+                setuniformmat4("invpersp", mat4invert(persp));
+                setuniformf("texturesize", RENDER_WIDTH, RENDER_HEIGHT);
+                setuniformf("useed", framenumber + (i / maxbounces));
+                setuniformi("enablegi", enablegi);
+                setuniformf("indirectstr", indirectstr);
+                bindrendertarget("normal", gbuffer, 1, GL_LINEAR, GL_LINEAR, GL_CLAMP_TO_EDGE, GL_CLAMP_TO_EDGE);
+                bindrendertarget("diffuse", gbuffer, 0, GL_LINEAR, GL_LINEAR, GL_CLAMP_TO_EDGE, GL_CLAMP_TO_EDGE);
+                bindrendertarget("litcolor", gibuffer[(i) % 2], 0, GL_LINEAR, GL_LINEAR, GL_CLAMP_TO_EDGE, GL_CLAMP_TO_EDGE);
+                //print("bounce: " + i + " rendering: " + (i + 1) % 2 + " input:" + (i) % 2);
+                drawmesh(plane);
+                bindshader(-1);
+                blend(0);
+            }
+
+            endpass();
+        }
+
         framenumber++;
     }
 
@@ -1265,11 +1403,22 @@ function loop()
             clear(clearcolor[0], clearcolor[1], clearcolor[2], clearcolor[3]);
             culling(CULL_NONE);
             cleardepth();
-            bindshader(post);
+
+            if(drawfalsecolors)
+            {
+                bindshader(postfalsecolor);
+                bindtexture("falsecolorgradient", falsecolor, GL_LINEAR, GL_LINEAR, GL_CLAMP_TO_EDGE, GL_CLAMP_TO_EDGE);
+            }
+            else
+            {
+                bindshader(post);
+            }
+
             bindattribute("in_Position", MESH_FLAG_POSITION);
             bindattribute("in_Uv", MESH_FLAG_TEXCOORD0);
             setuniformf("samples", framenumber);
-            bindrendertarget("diffuse", accumbuffer, 0);
+            setuniformf("exposure", exposure);
+            bindrendertarget("image", accumbuffer, 0);
             drawmesh(plane);
             bindshader(-1);
             blend(0);
