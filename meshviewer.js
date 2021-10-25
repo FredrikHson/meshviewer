@@ -22,7 +22,7 @@ iconshader = loadshader("icons.vert", "icons.frag", 0, 0, 0);
 
 manipmode = 0;
 lightmanip = 0;
-
+lightmanipdir = [1, 1];
 
 
 if(meshfilename == "")
@@ -517,6 +517,40 @@ function instantchange()
         instantfeedback = true;
     }
 }
+
+function swaplightmanip(l)
+{
+    lightmanip = l;
+    isomode = 0;
+
+    for(i = 0; i < 4; i++)
+    {
+        if(lightisolation[i] == 0)
+        {
+            isomode = 1;
+        }
+    }
+
+    if(isomode)
+    {
+        for(i = 0; i < 4; i++)
+        {
+            lightisolation[i] = 0;
+        }
+
+        lightisolation[l] = 1;
+    }
+    else
+    {
+        for(i = 0; i < 4; i++)
+        {
+            lightisolation[i] = 1;
+        }
+    }
+
+    framenumber = 0;
+}
+
 function modeswitch()
 {
     if(keycombo(KEY_1, false, false, true, PRESSED))
@@ -528,28 +562,28 @@ function modeswitch()
     if(keycombo(KEY_2, false, false, true, PRESSED))
     {
         manipmode = 1;
-        lightmanip = 0;
+        swaplightmanip(0);
         drawicontimer = 0;
     }
 
     if(keycombo(KEY_3, false, false, true, PRESSED))
     {
         manipmode = 2;
-        lightmanip = 1;
+        swaplightmanip(1);
         drawicontimer = 0;
     }
 
     if(keycombo(KEY_4, false, false, true, PRESSED))
     {
         manipmode = 3;
-        lightmanip = 2;
+        swaplightmanip(2);
         drawicontimer = 0;
     }
 
     if(keycombo(KEY_5, false, false, true, PRESSED))
     {
         manipmode = 4;
-        lightmanip = 3;
+        swaplightmanip(3);
         drawicontimer = 0;
     }
 
@@ -879,6 +913,11 @@ function handleinput()
         print("enable ssgi:" + enablegi);
     }
 
+    if(keycombo(KEY_S, false, true, false, PRESSED_NOW))
+    {
+        indirectstr = 1;
+    }
+
     if(keycombo(KEY_S, false, false, false, PRESSED))
     {
         indirectstr -= MOUSE_DELTA_X * 4 / WINDOW_WIDTH;
@@ -1004,6 +1043,11 @@ function handleinput()
 
     if(MOUSE_INSIDE)
     {
+        if(keycombo(MOUSE_1, true, false, false, PRESSED_NOW))
+        {
+            print("lightdir:" + lightdir[lightmanip][0] + "," + lightdir[lightmanip][1]);
+        }
+
         if(keycombo(MOUSE_1, true, false, false, PRESSED))
         {
             lightdir[lightmanip][0] -= MOUSE_DELTA_X * 0.01;
@@ -1318,7 +1362,7 @@ function loop()
     }
 
     finalbounce = false;
-    maxbounces = 4;
+    maxbounces = 1;
 
     if(framenumber < maxsamples)
     {
@@ -1376,8 +1420,8 @@ function loop()
                 setuniformmat4("invpersp", mat4invert(persp));
                 setuniformf("texturesize", RENDER_WIDTH, RENDER_HEIGHT);
                 setuniformf("useed", framenumber + (i / maxbounces));
-                setuniformi("enablegi", enablegi);
-                setuniformf("indirectstr", indirectstr);
+                setuniformi("enablegi", enablegi & !instantfeedback);
+                setuniformf("indirectstr", indirectstr/maxbounces);
                 bindrendertarget("normal", gbuffer, 1, GL_LINEAR, GL_LINEAR, GL_CLAMP_TO_EDGE, GL_CLAMP_TO_EDGE);
                 bindrendertarget("diffuse", gbuffer, 0, GL_LINEAR, GL_LINEAR, GL_CLAMP_TO_EDGE, GL_CLAMP_TO_EDGE);
                 bindrendertarget("litcolor", gibuffer[(i) % 2], 0, GL_LINEAR, GL_LINEAR, GL_CLAMP_TO_EDGE, GL_CLAMP_TO_EDGE);
