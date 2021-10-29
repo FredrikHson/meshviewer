@@ -231,18 +231,27 @@ function readconfigvalue(configname, defvalue)
     }
     else
     {
+        print(configname + " default used:" + defvalue);
         return defvalue;
     }
 }
 
-function loadconfig()
+function loadconfig(configstring)
 {
     try
     {
-        jsonstring = File.read("config.json");
+        if(configstring == undefined)
+        {
+            jsonstring = File.read("config.json");
+            watchfile("config.json");
+        }
+        else
+        {
+            jsonstring = configstring;
+        }
+
         config = JSON.parse(jsonstring);
         jsonstring = 0;
-        watchfile("config.json");
     }
     catch(error)
     {
@@ -304,6 +313,51 @@ function loadconfig()
 
 loadconfig();
 
+
+function copyconfig()
+{
+    configstring = "{\"defaults\":{";
+    configstring += "\"matcolor\":[" + matcolor + "]," + "\n";
+    configstring += "\"floorcolor\":[" + floorcolor + "]," + "\n";
+    configstring += "\"matspec\":" + matspec + "," + "\n";
+    configstring += "\"matgloss\":" + matgloss + "," + "\n";
+    configstring += "\"angle\": [" + angle[0] / RAD + "," + angle[1] / RAD + "]," + "\n";
+
+    for(i = 0; i < 4; i++)
+    {
+        configstring += "\"light" + (i + 1) + "\":{" + "\n";
+        configstring += "\"angle\": [" + lightdir[i][0] / RAD + "," + lightdir[i][1] / RAD + "]," + "\n";
+        configstring += "\"color\":[" + lightcolor[i] + "]," + "\n";
+        configstring += "\"shadowangle\":" + shadowangle[i] + "," + "\n";
+        configstring += "\"shadows\":" + use_shadows[i] + "," + "\n";
+        configstring += "\"power\":" + lightpower[i] + "," + "\n";
+        configstring += "\"floorshadows\":" + drawfloorshadowbuf[i] + "\n";
+        configstring += "}," + "\n";
+    }
+
+    configstring += "\"zoom\":" + zoom + "," + "\n";
+    configstring += "\"clear\":[" + clearcolor + "]," + "\n";
+    configstring += "\"position\":[" + pos + "]," + "\n";
+    configstring += "\"up\":" + "\"" + up + "\"," + "\n";
+    configstring += "\"cavityscale\":" + cavityscale + "," + "\n";
+    configstring += "\"drawfloor\":" + drawfloor + "," + "\n";
+    configstring += "\"doublesided\":" + doublesided + "," + "\n";
+    configstring += "\"calculatenormals\":" + calculatenormals + "," + "\n";
+    configstring += "\"colorgrid\":" + colorgrid + "," + "\n";
+    configstring += "\"ssgi\":" + enablegi + "," + "\n";
+    configstring += "\"exposure\":" + exposure + "," + "\n";
+    configstring += "\"maxsamples\":" + maxsamples + "\n";
+    configstring += "}}";
+    print();
+    print(configstring);
+    print();
+    setclipboard(configstring);
+}
+
+function pasteconfig()
+{
+    loadconfig(getclipboard());
+}
 
 function setupcenter()
 {
@@ -1003,42 +1057,14 @@ function handleinput()
         }
     }
 
-    if(keycombo(KEY_P, false, false, false, PRESSED_NOW))
+    if(keycombo(KEY_C, false, false, true, PRESSED_NOW))
     {
-        print();
-        print("{");
-        print("\"matcolor\":", matcolor, ",");
-        print("\"floorcolor\":", floorcolor, ",");
-        print("\"matspec\":", matspec, ",");
-        print("\"matgloss\":", matgloss, ",");
-        print("\"angle\": [", angle[0] / RAD, ",", angle[1] / RAD, "],");
+        copyconfig();
+    }
 
-        for(i = 0; i < 4; i++)
-        {
-            print("\"light" + (i + 1) + "\":{");
-            print("\"angle\": [", lightdir[i][0] / RAD, ",", lightdir[i][1] / RAD, "],");
-            print("\"color\":", lightcolor[i], ",");
-            print("\"shadowangle\":", shadowangle[i], ",");
-            print("\"shadows\":", use_shadows[i], ",");
-            print("\"power\":", lightpower[i], ",");
-            print("\"floorshadows\":", drawfloorshadowbuf[i]);
-            print("},");
-        }
-
-        print("\"zoom\":", zoom, ",");
-        print("\"clear\":", clearcolor, ",");
-        print("\"position\":", pos, ",");
-        print("\"up\":" + "\"" + up + "\",");
-        print("\"cavityscale\":", cavityscale, ",");
-        print("\"drawfloor\":", drawfloor, ",");
-        print("\"doublesided\":", doublesided, ",");
-        print("\"calculatenormals\":", calculatenormals, ",");
-        print("\"colorgrid\":", colorgrid);
-        print("\"ssgi\":", enablegi);
-        print("\"exposure\":", exposure);
-        print("\"maxsamples\":", maxsamples);
-        print("}");
-        print();
+    if(keycombo(KEY_V, false, false, true, PRESSED_NOW))
+    {
+        pasteconfig();
     }
 
     if(MOUSE_INSIDE)
@@ -1421,7 +1447,7 @@ function loop()
                 setuniformf("texturesize", RENDER_WIDTH, RENDER_HEIGHT);
                 setuniformf("useed", framenumber + (i / maxbounces));
                 setuniformi("enablegi", enablegi & !instantfeedback);
-                setuniformf("indirectstr", indirectstr/maxbounces);
+                setuniformf("indirectstr", indirectstr / maxbounces);
                 bindrendertarget("normal", gbuffer, 1, GL_LINEAR, GL_LINEAR, GL_CLAMP_TO_EDGE, GL_CLAMP_TO_EDGE);
                 bindrendertarget("diffuse", gbuffer, 0, GL_LINEAR, GL_LINEAR, GL_CLAMP_TO_EDGE, GL_CLAMP_TO_EDGE);
                 bindrendertarget("litcolor", gibuffer[(i) % 2], 0, GL_LINEAR, GL_LINEAR, GL_CLAMP_TO_EDGE, GL_CLAMP_TO_EDGE);
