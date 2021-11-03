@@ -83,6 +83,7 @@ instantfeedback = true;
 enablegi = 0;
 indirectstr = 1;
 drawfalsecolors = false;
+fov = 0.785398;
 
 function drawicon()
 {
@@ -299,6 +300,7 @@ function loadconfig(configstring)
     exposure = readconfigvalue("exposure", 1);
     enablegi = readconfigvalue("ssgi", 0);
     maxsamples = readconfigvalue("maxsamples", 65536);
+    fov = readconfigvalue("fov", 0.785398);
 
     // convert degress to radians
     for(i = 0; i < 4; i++)
@@ -317,36 +319,37 @@ loadconfig();
 function copyconfig()
 {
     configstring = "{\"defaults\":{";
-    configstring += "\"matcolor\":[" + matcolor + "]," + "\n";
-    configstring += "\"floorcolor\":[" + floorcolor + "]," + "\n";
-    configstring += "\"matspec\":" + matspec + "," + "\n";
-    configstring += "\"matgloss\":" + matgloss + "," + "\n";
-    configstring += "\"angle\": [" + angle[0] / RAD + "," + angle[1] / RAD + "]," + "\n";
+    configstring += "\"matcolor\":[" + matcolor + "],\n";
+    configstring += "\"floorcolor\":[" + floorcolor + "],\n";
+    configstring += "\"matspec\":" + matspec + ",\n";
+    configstring += "\"matgloss\":" + matgloss + ",\n";
+    configstring += "\"angle\": [" + angle[0] / RAD + "," + angle[1] / RAD + "],\n";
 
     for(i = 0; i < 4; i++)
     {
         configstring += "\"light" + (i + 1) + "\":{" + "\n";
-        configstring += "\"angle\": [" + lightdir[i][0] / RAD + "," + lightdir[i][1] / RAD + "]," + "\n";
-        configstring += "\"color\":[" + lightcolor[i] + "]," + "\n";
-        configstring += "\"shadowangle\":" + shadowangle[i] + "," + "\n";
-        configstring += "\"shadows\":" + use_shadows[i] + "," + "\n";
-        configstring += "\"power\":" + lightpower[i] + "," + "\n";
+        configstring += "\"angle\": [" + lightdir[i][0] / RAD + "," + lightdir[i][1] / RAD + "],\n";
+        configstring += "\"color\":[" + lightcolor[i] + "],\n";
+        configstring += "\"shadowangle\":" + shadowangle[i] + ",\n";
+        configstring += "\"shadows\":" + use_shadows[i] + ",\n";
+        configstring += "\"power\":" + lightpower[i] + ",\n";
         configstring += "\"floorshadows\":" + drawfloorshadowbuf[i] + "\n";
-        configstring += "}," + "\n";
+        configstring += "},\n";
     }
 
-    configstring += "\"zoom\":" + zoom + "," + "\n";
-    configstring += "\"clear\":[" + clearcolor + "]," + "\n";
-    configstring += "\"position\":[" + pos + "]," + "\n";
-    configstring += "\"up\":" + "\"" + up + "\"," + "\n";
-    configstring += "\"cavityscale\":" + cavityscale + "," + "\n";
-    configstring += "\"drawfloor\":" + drawfloor + "," + "\n";
-    configstring += "\"doublesided\":" + doublesided + "," + "\n";
-    configstring += "\"calculatenormals\":" + calculatenormals + "," + "\n";
-    configstring += "\"colorgrid\":" + colorgrid + "," + "\n";
-    configstring += "\"ssgi\":" + enablegi + "," + "\n";
-    configstring += "\"exposure\":" + exposure + "," + "\n";
-    configstring += "\"maxsamples\":" + maxsamples + "\n";
+    configstring += "\"zoom\":" + zoom + ",\n";
+    configstring += "\"clear\":[" + clearcolor + "],\n";
+    configstring += "\"position\":[" + pos + "],\n";
+    configstring += "\"up\":" + "\"" + up + "\",\n";
+    configstring += "\"cavityscale\":" + cavityscale + ",\n";
+    configstring += "\"drawfloor\":" + drawfloor + ",\n";
+    configstring += "\"doublesided\":" + doublesided + ",\n";
+    configstring += "\"calculatenormals\":" + calculatenormals + ",\n";
+    configstring += "\"colorgrid\":" + colorgrid + ",\n";
+    configstring += "\"ssgi\":" + enablegi + ",\n";
+    configstring += "\"exposure\":" + exposure + ",\n";
+    configstring += "\"maxsamples\":" + maxsamples + ", \n";
+    configstring += "\"fov\":" + fov + "\n";
     configstring += "}}";
     print();
     print(configstring);
@@ -1153,6 +1156,26 @@ function handleinput()
         }
     }
 
+    if(keycombo(MOUSE_2, true, false, false, PRESSED))
+    {
+        fov += MOUSE_DELTA_Y * 0.005;
+
+        if(fov < 0.1)
+        {
+            fov = 0.1;
+        }
+
+        if(fov > 1.5)
+        {
+            fov = 1.5;
+        }
+
+        if(MOUSE_DELTA_Y != 0)
+        {
+            instantfeedback = true;
+        }
+    }
+
     if(keycombo(KEY_G, false, false, false, PRESSED_NOW))
     {
         grid = grid ? 0 : 1;
@@ -1288,7 +1311,7 @@ function loop()
             clear(0, 0, 0, 1, 1);
             cleardepth();
             view = mat4settranslation(pos[0], pos[1], zoom);
-            persp = mat4setperspective(0.785398, RENDER_WIDTH / RENDER_HEIGHT, 0.1, 1000.0);
+            persp = mat4setperspective(fov, RENDER_WIDTH / RENDER_HEIGHT, 0.1, 1000.0);
 
             if(framenumber < maxsamples)
             {
@@ -1337,7 +1360,7 @@ function loop()
             culling(CULL_NONE);
             cleardepth();
             view = mat4settranslation(pos[0], pos[1], zoom);
-            persp = mat4setperspective(0.785398, RENDER_WIDTH / RENDER_HEIGHT, 0.1, 1000.0);
+            persp = mat4setperspective(fov, RENDER_WIDTH / RENDER_HEIGHT, 0.1, 1000.0);
 
             if(framenumber < maxsamples)
             {
@@ -1431,7 +1454,7 @@ function loop()
                 culling(CULL_NONE);
                 cleardepth();
                 view = mat4settranslation(pos[0], pos[1], zoom);
-                persp = mat4setperspective(0.785398, RENDER_WIDTH / RENDER_HEIGHT, 0.1, 1000.0);
+                persp = mat4setperspective(fov, RENDER_WIDTH / RENDER_HEIGHT, 0.1, 1000.0);
 
                 if(framenumber < maxsamples)
                 {
