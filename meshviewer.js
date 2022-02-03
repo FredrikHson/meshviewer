@@ -717,7 +717,7 @@ function manipulatelight()
             shadowangle[lightmanip] = 360.0;
         }
 
-        setwindowtitle("shadowangle:".concat(shadowangle[0]));
+        setwindowtitle("shadowangle:".concat(shadowangle[lightmanip]));
     }
 
     if(keycombo(KEY_5, false, false, false, PRESSED_NOW))
