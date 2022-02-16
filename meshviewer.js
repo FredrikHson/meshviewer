@@ -53,7 +53,7 @@ drawfloorshadowbuf = [false, false, false, false];
 
 plane = generateplane(50);
 
-clearcolor = [ 0, 0, 0, 0 ];
+clearcolor = [0, 0, 0, 0];
 matcolor = [1, 1, 1];
 floorcolor = [1, 1, 1];
 matgloss = 0.25;
@@ -73,7 +73,7 @@ shadowangle = [1.0, 1.0, 1.0, 1.0];
 calculatenormals = 0;
 maxsamples = 65536;
 //maxsamples = 64;
-center = {x: 0, y: 0, z: 0};
+center = { x: 0, y: 0, z: 0 };
 drawicontimer = 69;
 lightisolation = [1, 1, 1, 1];
 exposure = 1;
@@ -111,22 +111,22 @@ function drawicon()
             break;
 
         case 1:
-            setuniformf("materialcolor", lightcolor[0][0]*lightpower[0], lightcolor[0][1]*lightpower[0], lightcolor[0][2]*lightpower[0]);
+            setuniformf("materialcolor", lightcolor[0][0] * lightpower[0], lightcolor[0][1] * lightpower[0], lightcolor[0][2] * lightpower[0]);
             setuniformf("icon", 1, 1);
             break;
 
         case 2:
-            setuniformf("materialcolor", lightcolor[1][0]*lightpower[1], lightcolor[1][1]*lightpower[1], lightcolor[1][2]*lightpower[1]);
+            setuniformf("materialcolor", lightcolor[1][0] * lightpower[1], lightcolor[1][1] * lightpower[1], lightcolor[1][2] * lightpower[1]);
             setuniformf("icon", 2, 1);
             break;
 
         case 3:
-            setuniformf("materialcolor", lightcolor[2][0]*lightpower[2], lightcolor[2][1]*lightpower[2], lightcolor[2][2]*lightpower[2]);
+            setuniformf("materialcolor", lightcolor[2][0] * lightpower[2], lightcolor[2][1] * lightpower[2], lightcolor[2][2] * lightpower[2]);
             setuniformf("icon", 3, 1);
             break;
 
         case 4:
-            setuniformf("materialcolor", lightcolor[3][0]*lightpower[3], lightcolor[3][1]*lightpower[3], lightcolor[3][2]*lightpower[3]);
+            setuniformf("materialcolor", lightcolor[3][0] * lightpower[3], lightcolor[3][1] * lightpower[3], lightcolor[3][2] * lightpower[3]);
             setuniformf("icon", 0, 0);
             break;
 
@@ -212,7 +212,7 @@ function readconfigvalue(configname, defvalue)
                 {
                     reg = new RegExp(name, "i");
 
-                    if(reg.test(splitpath[i])  == true)
+                    if(reg.test(splitpath[i]) == true)
                     {
                         c = getconfigvalue(configname, pathoverrides[name]);
 
@@ -254,7 +254,7 @@ function loadconfig(configstring)
         config = JSON.parse(jsonstring);
         jsonstring = 0;
     }
-    catch(error)
+    catch (error)
     {
         print("failed to load config.json");
     }
@@ -1185,7 +1185,7 @@ function handleinput()
 function loop()
 {
     handleinput();
-    zlightvector = {x: 0, y: 0, z: 1};
+    zlightvector = { x: 0, y: 0, z: 1 };
     model = mat4loadidentity();
     model = mat4mul(model, mat4settranslation(-center.x, -center.y, -center.z));
     model = mat4mul(model, mat4setscale(1 / largestdist));
@@ -1252,8 +1252,8 @@ function loop()
             shadowmat[i] = mat4mul(shadowmat[i], mat4setrotation(lightdir[i][0] + getcirclejitterx(framenumber) * lightangle, 0, 1, 0));
             shadowmat[i] = mat4mul(shadowmat[i], mat4setrotation(lightdir[i][1] + getcirclejittery(framenumber) * lightangle, 1, 0, 0));
             lightmat = mat4loadidentity();
-            lightmat  = mat4mul(lightmat, mat4setrotation(lightdir[i][0] + getcirclejitterx(framenumber) * lightangle, 0, 1, 0));
-            lightmat  = mat4mul(lightmat, mat4setrotation(lightdir[i][1] + getcirclejittery(framenumber) * lightangle, 1, 0, 0));
+            lightmat = mat4mul(lightmat, mat4setrotation(lightdir[i][0] + getcirclejitterx(framenumber) * lightangle, 0, 1, 0));
+            lightmat = mat4mul(lightmat, mat4setrotation(lightdir[i][1] + getcirclejittery(framenumber) * lightangle, 1, 0, 0));
             lightvector[i] = vec3mat4mul(zlightvector, mat4invert((lightmat)));
             shadowpersp[i] = mat4mul(unmodshadowpersp, mat4settranslation(shadowjitter / shadowbufres[i] * getsquarejitterx(framenumber), shadowjitter / shadowbufres[i] * getsquarejittery(framenumber), 0));
         }
@@ -1376,10 +1376,10 @@ function loop()
             setuniformf("lightvector1", lightvector[1].x, lightvector[1].y, lightvector[1].z);
             setuniformf("lightvector2", lightvector[2].x, lightvector[2].y, lightvector[2].z);
             setuniformf("lightvector3", lightvector[3].x, lightvector[3].y, lightvector[3].z);
-            setuniformf("lightcolor",  lightcolor[0][0]*lightpower[0]*lightisolation[0], lightcolor[0][1]*lightpower[0]*lightisolation[0], lightcolor[0][2]*lightpower[0]*lightisolation[0]);
-            setuniformf("lightcolor1", lightcolor[1][0]*lightpower[1]*lightisolation[1], lightcolor[1][1]*lightpower[1]*lightisolation[1], lightcolor[1][2]*lightpower[1]*lightisolation[1]);
-            setuniformf("lightcolor2", lightcolor[2][0]*lightpower[2]*lightisolation[2], lightcolor[2][1]*lightpower[2]*lightisolation[2], lightcolor[2][2]*lightpower[2]*lightisolation[2]);
-            setuniformf("lightcolor3", lightcolor[3][0]*lightpower[3]*lightisolation[3], lightcolor[3][1]*lightpower[3]*lightisolation[3], lightcolor[3][2]*lightpower[3]*lightisolation[3]);
+            setuniformf("lightcolor", lightcolor[0][0] * lightpower[0] * lightisolation[0], lightcolor[0][1] * lightpower[0] * lightisolation[0], lightcolor[0][2] * lightpower[0] * lightisolation[0]);
+            setuniformf("lightcolor1", lightcolor[1][0] * lightpower[1] * lightisolation[1], lightcolor[1][1] * lightpower[1] * lightisolation[1], lightcolor[1][2] * lightpower[1] * lightisolation[1]);
+            setuniformf("lightcolor2", lightcolor[2][0] * lightpower[2] * lightisolation[2], lightcolor[2][1] * lightpower[2] * lightisolation[2], lightcolor[2][2] * lightpower[2] * lightisolation[2]);
+            setuniformf("lightcolor3", lightcolor[3][0] * lightpower[3] * lightisolation[3], lightcolor[3][1] * lightpower[3] * lightisolation[3], lightcolor[3][2] * lightpower[3] * lightisolation[3]);
             setuniformf("spec", matspec);
             setuniformi("grid", grid);
             setuniformi("colorgrid", colorgrid);
