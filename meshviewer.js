@@ -85,6 +85,9 @@ indirectstr = 1;
 drawfalsecolors = false;
 fov = 0.785398;
 
+syncmode = 0; // 0 no sync, 1 server, 2 client
+registerglobal("syncmode");
+
 function drawicon()
 {
     drawicontimer += DELTA_TIME;
@@ -315,8 +318,7 @@ function loadconfig(configstring)
 
 loadconfig();
 
-
-function copyconfig()
+function createconfigstring()
 {
     configstring = "{\"defaults\":{";
     configstring += "\"matcolor\":[" + matcolor + "],\n";
@@ -351,6 +353,12 @@ function copyconfig()
     configstring += "\"maxsamples\":" + maxsamples + ", \n";
     configstring += "\"fov\":" + fov + "\n";
     configstring += "}}";
+    return configstring;
+}
+
+function copyconfig()
+{
+    configstring = createconfigstring();
     print();
     print(configstring);
     print();
@@ -360,6 +368,7 @@ function copyconfig()
 function pasteconfig()
 {
     loadconfig(getclipboard());
+    framenumber = 0;
 }
 
 function setupcenter()
@@ -1180,6 +1189,38 @@ function handleinput()
     {
         grid = grid ? 0 : 1;
     }
+    if(keycombo(KEY_SCROLL_LOCK, false, false, false, PRESSED_NOW))
+    {
+        if(syncmode != 1)
+        {
+            syncmode = 1;
+            print("syncmode: server");
+        }
+        else
+        {
+            syncmode = 0;
+            print("syncmode: off");
+        }
+    }
+    if(keycombo(KEY_SCROLL_LOCK, true, false, false, PRESSED_NOW))
+    {
+        if(syncmode != 2)
+        {
+            syncmode = 2;
+            print("syncmode: client");
+            watchfile("/tmp/meshviewersync.json");
+        }
+        else
+        {
+            syncmode = 0;
+            print("syncmode: off");
+        }
+    }
+
+    if(syncmode == 1)
+    {
+        syncwrite();
+    }
 }
 
 function loop()
@@ -1542,6 +1583,17 @@ function resize()
     framenumber = 0;
 }
 
+function syncwrite()
+{
+    if(anykeypressed && framenumber == interactiveframes || instantfeedback)
+    {
+        configstring = createconfigstring();
+
+        File.write("/tmp/meshviewersync.json", configstring);
+
+    }
+}
+
 function filechange(filename)
 {
     print("file changed", filename);
@@ -1549,6 +1601,11 @@ function filechange(filename)
     if(filename == "config.json")
     {
         loadconfig();
+    }
+    if(filename == "/tmp/meshviewersync.json")
+    {
+        jsonstring = File.read("/tmp/meshviewersync.json")
+        loadconfig(jsonstring);
     }
 
     bbox = getmeshbbox(mesh);
